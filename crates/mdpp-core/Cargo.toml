@@ -1,0 +1,21 @@
+[package]
+name = "mdpp-core"
+description = "Documents, files and settings for MD++. No UI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+toml.workspace = true
+etcetera.workspace = true
+regex.workspace = true
+encoding_rs.workspace = true
+chardetng.workspace = true
+interprocess.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,20 @@
+[package]
+name = "mdpp-lang"
+description = "Markdown intellisense for MD++: completions and diagnostics. No UI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+mdpp-markdown.workspace = true
+ropey.workspace = true
+emojis.workspace = true
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mdpp-markdown.workspace = true

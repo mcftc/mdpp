@@ -1,0 +1,10 @@
+[package]
+name = "tsbench"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+tree-sitter = "0.27"
+tree-sitter-md = { version = "0.5", features = ["parser"] }
+pulldown-cmark = "0.13"
+[profile.release]
+debug = false

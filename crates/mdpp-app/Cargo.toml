@@ -1,0 +1,28 @@
+[package]
+name = "mdpp-app"
+description = "MD++ — a lightweight Markdown editor (desktop app)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "mdpp"
+path = "src/main.rs"
+
+[dependencies]
+mdpp-core.workspace = true
+mdpp-markdown.workspace = true
+mdpp-lang.workspace = true
+gpui-kit.workspace = true
+ropey.workspace = true
+lsp-types.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+notify.workspace = true
+smol.workspace = true
+
+[lints]
+workspace = true

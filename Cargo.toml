@@ -1,0 +1,70 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+# Bake-off code behind the toolkit decision; each spike is its own workspace.
+exclude = ["spikes"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/mcftc/mdpp"
+
+[workspace.dependencies]
+mdpp-core = { path = "crates/mdpp-core" }
+mdpp-markdown = { path = "crates/mdpp-markdown" }
+mdpp-lang = { path = "crates/mdpp-lang" }
+
+# UI toolkit — pinned exactly (PLAN D1): gpui-kit releases weekly and pins GPUI snapshots.
+gpui-kit = "=0.10.0"
+# Must match the rope type inside gpui-kit's editor (PLAN D2): gpui-base 0.10 uses ropey 2 beta.
+ropey = { version = "=2.0.0-beta.1", features = ["metric_lines_lf"] }
+# Same major as gpui-base, so provider results need no conversion (PLAN D7).
+lsp-types = "0.97"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+emojis = "0.9"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "1"
+etcetera = "0.11"
+regex = "1"
+encoding_rs = "0.8"
+chardetng = "1"
+interprocess = "2"
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
+smol = "2"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# Day-to-day optimized builds: fast enough to link.
+[profile.release]
+lto = "thin"
+strip = true
+
+# What we ship (PLAN §5): smallest and fastest binary, slow to build.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+# Debug builds stay usable: optimize the GPUI hot paths even in dev (as gpui-kit recommends).
+[profile.dev.package]
+gpui-pre = { opt-level = 3 }
+resvg = { opt-level = 3 }
+rustybuzz = { opt-level = 3 }
+taffy = { opt-level = 3 }
+ttf-parser = { opt-level = 3 }
+smol = { opt-level = 3 }
+
+# Release speed with symbols, for perf/samply profiling (PLAN §8).
+[profile.profiling]
+inherits = "release"
+strip = false
+debug = "line-tables-only"

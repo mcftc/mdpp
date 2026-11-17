@@ -1,0 +1,6 @@
+.agy-staff/
+/target/
+/.bakeoff/
+spikes/**/target/
+spikes/**/results/
+spikes/**/sample-1mb.md
