@@ -10,4 +10,5 @@ pub mod paths;
 pub mod search;
 pub mod session;
 pub mod settings;
+pub mod settings_ui;
 pub mod text;

@@ -74,12 +74,7 @@ impl Settings {
     /// Lay `user` (the contents of a settings.toml) over the defaults. A broken file never stops
     /// the editor: unparsable files and bad values fall back to the defaults with a warning.
     pub fn load(user: &str) -> Loaded {
-        let mut warnings = Vec::new();
-        let mut merged: toml::Table = toml::from_str(DEFAULT_SETTINGS).expect("defaults parse");
-        match toml::from_str::<toml::Table>(user) {
-            Ok(table) => merge(&mut merged, table, "", &mut warnings),
-            Err(error) => warnings.push(format!("settings.toml is not valid TOML: {error}")),
-        }
+        let (merged, mut warnings) = merged(user);
         let settings =
             toml::Value::Table(merged)
                 .try_into()
@@ -91,6 +86,18 @@ impl Settings {
                 });
         Loaded { settings, warnings }
     }
+}
+
+/// Every setting's current value: `user` laid over the defaults, as a table (what the settings
+/// window reads), with what was wrong with the user's file.
+pub fn merged(user: &str) -> (toml::Table, Vec<String>) {
+    let mut warnings = Vec::new();
+    let mut merged: toml::Table = toml::from_str(DEFAULT_SETTINGS).expect("defaults parse");
+    match toml::from_str::<toml::Table>(user) {
+        Ok(table) => merge(&mut merged, table, "", &mut warnings),
+        Err(error) => warnings.push(format!("settings.toml is not valid TOML: {error}")),
+    }
+    (merged, warnings)
 }
 
 /// A first `settings.toml` for the user: every default, commented out, under a short guide.

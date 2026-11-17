@@ -146,6 +146,10 @@ keys = "secondary-g"
 action = "mdpp::GoToLine"
 
 [[binding]]
+keys = "secondary-,"
+action = "mdpp::OpenSettings"
+
+[[binding]]
 keys = "secondary-="
 action = "mdpp::ZoomIn"
 

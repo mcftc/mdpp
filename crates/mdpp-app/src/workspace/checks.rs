@@ -627,7 +627,7 @@ impl Workspace {
             .filter(|file| !file.exists());
         if let Some(file) = settings_file {
             this.update_in(cx, |_, window, cx| {
-                window.dispatch_action(Box::new(OpenSettings), cx)
+                window.dispatch_action(Box::new(OpenSettingsFile), cx)
             })
             .ok();
             cx.background_executor().timer(bench::SETTLE).await;
@@ -641,6 +641,53 @@ impl Workspace {
             println!(
                 "BENCH check settings_file created={} opened={opened}",
                 content == mdpp_core::settings::user_template()
+            );
+            std::fs::remove_file(&file).ok();
+
+            // The settings window (Ctrl+,) writes a change into settings.toml and the editor
+            // applies it at once; setting the default back removes the line again.
+            this.update_in(cx, |_, window, cx| {
+                window.dispatch_action(Box::new(OpenSettings), cx)
+            })
+            .ok();
+            cx.background_executor().timer(bench::SETTLE).await;
+            let view = this
+                .update(cx, |this, _| this.settings_window.clone())
+                .ok()
+                .flatten();
+            let opened = view.is_some();
+            let (mut applied, mut line_removed, mut restored) = (false, false, false);
+            if let Some((handle, view)) = view {
+                let defaults: toml::Table =
+                    toml::from_str(mdpp_core::settings::DEFAULT_SETTINGS).unwrap_or_default();
+                let default = mdpp_core::settings_ui::lookup(&defaults, "font_size").cloned();
+                let set = cx.update(|_, cx| view.read(cx).setter()).ok();
+                if let Some(set) = &set {
+                    cx.update(|_, cx| set("font_size", toml::Value::Integer(17), cx))
+                        .ok();
+                }
+                cx.background_executor().timer(bench::SETTLE).await;
+                applied = this
+                    .update(cx, |this, _| this.settings.font_size == 17.0)
+                    .unwrap_or(false);
+                if let (Some(set), Some(default)) = (&set, default) {
+                    cx.update(|_, cx| set("font_size", default, cx)).ok();
+                }
+                cx.background_executor().timer(bench::SETTLE).await;
+                line_removed = !std::fs::read_to_string(&file)
+                    .unwrap_or_default()
+                    .contains("font_size");
+                restored = this
+                    .update(cx, |this, _| {
+                        this.settings.font_size == Settings::default().font_size
+                    })
+                    .unwrap_or(false);
+                handle
+                    .update(cx, |_, window, _| window.remove_window())
+                    .ok();
+            }
+            println!(
+                "BENCH check settings_window opened={opened} applied={applied} line_removed={line_removed} restored={restored}"
             );
             std::fs::remove_file(&file).ok();
         }

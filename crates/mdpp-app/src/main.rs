@@ -14,6 +14,7 @@ mod highlight;
 mod menus;
 mod navigation;
 mod preview;
+mod settings_window;
 mod watch;
 mod workspace;
 

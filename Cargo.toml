@@ -27,6 +27,8 @@ emojis = "0.9"
 anyhow = "1"
 serde = { version = "1", features = ["derive"] }
 toml = "1"
+# Writes a setting into the user's settings.toml keeping their comments (already built for gpui).
+toml_edit = "0.25"
 etcetera = "0.11"
 regex = "1"
 encoding_rs = "0.8"

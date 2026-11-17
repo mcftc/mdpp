@@ -17,6 +17,7 @@ soft_wrap = true
 # Larger documents open without soft wrap: wrapping lays out every line up front,
 # about 0.6 s per MB (bytes).
 soft_wrap_max_bytes = 262144
+# Show line numbers beside the text.
 line_numbers = true
 # Editor text size in logical pixels; Ctrl+= / Ctrl+- zoom from here, Ctrl+0 comes back.
 font_size = 13

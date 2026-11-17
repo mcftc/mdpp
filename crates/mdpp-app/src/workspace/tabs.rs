@@ -9,6 +9,10 @@ use gpui_kit::component::Selectable as _;
 use gpui_kit::component::menu::ContextMenuExt as _;
 
 use crate::menus;
+use crate::settings_window::{MainWindowCall, SettingsWindow};
+
+/// The settings window's size: room for the category list and a readable row of descriptions.
+const SETTINGS_WINDOW_SIZE: (f32, f32) = (900.0, 640.0);
 
 use super::*;
 
@@ -289,9 +293,73 @@ impl Workspace {
         self.open_paths(vec![path], window, cx);
     }
 
+    /// Settings (Ctrl+,): the settings window, or the one already open brought forward.
     pub(super) fn open_settings(
         &mut self,
         _: &OpenSettings,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some((handle, _)) = &self.settings_window
+            && handle
+                .update(cx, |_, window, _| window.activate_window())
+                .is_ok()
+        {
+            return;
+        }
+        let path = self.paths.as_ref().map(Paths::settings_file);
+        // "Edit in settings.toml" opens the file here, in the main window.
+        let main = window.window_handle();
+        let edit_file: MainWindowCall = Rc::new(move |cx: &mut App| {
+            main.update(cx, |_, window, cx| {
+                window.activate_window();
+                window.dispatch_action(Box::new(OpenSettingsFile), cx);
+            })
+            .ok();
+        });
+        // A change applies at once; the watcher would miss a config folder that did not exist.
+        let workspace = cx.entity().downgrade();
+        let on_change: MainWindowCall = Rc::new(move |cx: &mut App| {
+            let workspace = workspace.clone();
+            main.update(cx, |_, window, cx| {
+                workspace
+                    .update(cx, |this, cx| {
+                        this.refresh_watches(cx);
+                        this.reload_settings(window, cx);
+                    })
+                    .ok();
+            })
+            .ok();
+        });
+        let options = WindowOptions {
+            window_bounds: Some(WindowBounds::centered(
+                size(px(SETTINGS_WINDOW_SIZE.0), px(SETTINGS_WINDOW_SIZE.1)),
+                cx,
+            )),
+            ..Default::default()
+        };
+        let opened = gpui_kit::open_window(options, cx, |window, cx| {
+            window.set_window_title("MD++ Settings");
+            cx.new(|_| SettingsWindow::new(path, edit_file, on_change))
+        });
+        match opened {
+            Ok((handle, view)) => {
+                // Forget the window once it closes, so the next Ctrl+, opens a new one.
+                cx.observe_release(&view, |this, _, _| this.settings_window = None)
+                    .detach();
+                self.settings_window = Some((handle, view));
+            }
+            Err(error) => window.push_notification(
+                Notification::error(format!("Could not open the settings window: {error:#}")),
+                cx,
+            ),
+        }
+    }
+
+    /// The user's settings.toml in a tab, created with every default commented out.
+    pub(super) fn open_settings_file(
+        &mut self,
+        _: &OpenSettingsFile,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {

@@ -25,6 +25,7 @@ items = [
   { label = "Close Saved Tabs", action = "mdpp::CloseSavedTabs" },
   { separator = true },
   { label = "Settings", action = "mdpp::OpenSettings" },
+  { label = "Settings File", action = "mdpp::OpenSettingsFile" },
   { label = "Keyboard Shortcuts", action = "mdpp::OpenKeymap" },
   { separator = true },
   { label = "Quit", action = "mdpp::Quit" },

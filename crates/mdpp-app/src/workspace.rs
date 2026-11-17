@@ -90,6 +90,7 @@ actions!(
         SaveAll,
         ReopenClosedTab,
         ReportBug,
+        OpenSettingsFile,
         CloseOtherTabs,
         CloseTabsToRight,
         CloseSavedTabs,
@@ -226,6 +227,11 @@ pub struct Workspace {
     show_outline: bool,
     /// The menu bar beside ≡ is open.
     show_menu_bar: bool,
+    /// The settings window, while it is open.
+    settings_window: Option<(
+        AnyWindowHandle,
+        Entity<crate::settings_window::SettingsWindow>,
+    )>,
     /// Zoom steps from the `font_size` setting.
     zoom: i32,
     /// Word wrap chosen with Alt+Z; `None` follows the settings.
@@ -302,6 +308,7 @@ impl Workspace {
             show_goto: false,
             show_outline: settings.outline_on_start,
             show_menu_bar: false,
+            settings_window: None,
             zoom: 0,
             wrap: None,
             closed: Vec::new(),
@@ -484,7 +491,7 @@ impl Workspace {
     }
 
     /// Watch the folders of open files and the config folder (PLAN §3.3).
-    fn refresh_watches(&mut self, cx: &App) {
+    pub(super) fn refresh_watches(&mut self, cx: &App) {
         let Some(watcher) = self.watcher.as_mut() else {
             return;
         };
@@ -549,7 +556,7 @@ impl Workspace {
 
     /// settings.toml changed: apply it. Most values take effect at once; a few (soft wrap, line
     /// numbers, markup fade, preview width) apply to tabs opened afterwards.
-    fn reload_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    pub(super) fn reload_settings(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let file = self.paths.as_ref().map(Paths::settings_file);
         let text = file
             .and_then(|f| std::fs::read_to_string(f).ok())
@@ -567,7 +574,15 @@ impl Workspace {
         });
         self.settings = settings;
         eprintln!("mdpp: settings reloaded");
-        window.push_notification(Notification::info("Settings reloaded"), cx);
+        // The settings window shows its own changes; a hand edit gets a notice.
+        match &self.settings_window {
+            Some((_, view)) => view.update(cx, |view, cx| {
+                view.reload();
+                cx.notify();
+            }),
+            None => window.push_notification(Notification::info("Settings reloaded"), cx),
+        }
+        cx.notify();
         for warning in loaded.warnings {
             eprintln!("mdpp: {warning}");
             window.push_notification(Notification::warning(warning), cx);
@@ -1199,6 +1214,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::open_recent))
             .on_action(cx.listener(Self::open_settings))
             .on_action(cx.listener(Self::open_keymap))
+            .on_action(cx.listener(Self::open_settings_file))
             .on_action(cx.listener(Self::report_bug))
             .on_action(cx.listener(Self::convert_eol))
             .on_action(cx.listener(Self::toggle_outline))

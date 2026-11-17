@@ -1,0 +1,80 @@
+# How the settings window arranges the settings (PLAN §6.1a). Names, defaults and descriptions
+# come from default-settings.toml; this file only places each setting on a page, in a group, and
+# says what its control allows. Every setting must appear exactly once (a test checks it).
+#
+# `settings` lists setting names; `table.*` takes every entry of a table, so a new entry there
+# shows up without an edit here.
+
+[[page]]
+title = "Editor"
+
+[[page.group]]
+title = "Text"
+settings = ["font_size", "line_numbers", "markup_fade"]
+
+[[page.group]]
+title = "Wrapping"
+settings = ["soft_wrap", "soft_wrap_max_bytes"]
+
+[[page.group]]
+title = "Typing"
+settings = ["auto_close_pairs", "structure_debounce_ms"]
+
+[[page.group]]
+title = "Caret"
+settings = ["cursor_blink_interval_ms", "cursor_blink_idle_timeout_ms"]
+
+[[page.group]]
+title = "Code blocks"
+settings = ["code_highlight_max_lines"]
+
+[[page]]
+title = "Files"
+
+[[page.group]]
+title = "Hot exit"
+settings = ["hot_exit", "hot_exit_interval_ms"]
+
+[[page.group]]
+title = "Other programs"
+settings = ["file_watch_debounce_ms"]
+
+[[page.group]]
+title = "Recent files"
+settings = ["recent_files_max"]
+
+[[page]]
+title = "Window & Layout"
+
+[[page.group]]
+title = "Window"
+settings = ["window_width", "window_height"]
+
+[[page.group]]
+title = "Outline"
+settings = ["outline_on_start", "outline_width"]
+
+[[page.group]]
+title = "Status bar"
+settings = ["reading_words_per_minute"]
+
+[[page]]
+title = "Preview"
+
+[[page.group]]
+title = "Preview"
+settings = ["preview_on_start", "preview_max_width", "preview_remote_images"]
+
+[[page]]
+title = "Diagnostics"
+
+[[page.group]]
+title = "Link and reference checks"
+settings = ["diagnostics.*"]
+
+# Limits and choices of controls. Without an entry: numbers from 0 in steps of 1, text as typed.
+[controls]
+font_size = { min = 6, max = 72 }
+markup_fade = { min = 0, max = 1, step = 0.05 }
+recent_files_max = { min = 0, max = 100 }
+"diagnostics.*" = { choices = ["error", "warning", "info", "hint", "off"] }

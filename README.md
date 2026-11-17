@@ -20,7 +20,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Outline sidebar, word count and reading time, HTML export
 - Live preview with scroll sync; find/replace with regex
 - Reloads files changed by other programs; single instance (`mdpp file.md:line:col`)
-- Settings and key bindings as TOML files, applied live
+- Settings window (Ctrl+,) like Zed's: search, categories, a described control per setting —
+  it writes your `settings.toml`; settings and key bindings are TOML files, applied live
 
 ```sh
 cargo run --release -p mdpp-app -- README.md
@@ -44,8 +45,8 @@ Try typing `](#`, `](`, `:roc`, ```` ``` ```` or `> [!` in a document.
 
 All bindings are in [`assets/default-keymap.toml`](assets/default-keymap.toml); settings and their
 defaults in [`assets/default-settings.toml`](assets/default-settings.toml); the menus in
-[`assets/menus.toml`](assets/menus.toml). *≡ → File → Settings* and *Keyboard Shortcuts* open your
-own files, created with every default commented out. *Help → Report a Bug* opens a pre-filled issue.
+[`assets/menus.toml`](assets/menus.toml). *Ctrl+,* opens the settings window; *File → Settings File* and
+*Keyboard Shortcuts* open your own files, created with every default commented out. *Help → Report a Bug* opens a pre-filled issue.
 
 - [Development plan](docs/PLAN.md) · [Research summary](docs/RESEARCH.md) · [Progress](docs/PROGRESS.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
