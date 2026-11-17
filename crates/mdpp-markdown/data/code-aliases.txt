@@ -1,0 +1,21 @@
+# Info-string names syntect does not know by itself: `name syntax`, where `syntax` is a file
+# extension or syntax name syntect knows, or `-` for "plain text, do not colour".
+# Names are compared in lower case. Anything not listed is looked up as written.
+c# cs
+csharp cs
+c++ cpp
+golang go
+make Makefile
+shell sh
+console sh
+shell-session sh
+zsh sh
+ps1 PowerShell
+pwsh PowerShell
+jsonc json
+json5 json
+dotenv sh
+text -
+txt -
+plain -
+plaintext -

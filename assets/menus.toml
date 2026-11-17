@@ -1,0 +1,102 @@
+# The menu bar (≡ in the title bar). Adding or moving a command is an edit here, not in code.
+#
+# `action` is an action name as keymap.toml uses it; the shortcut shown beside an item is read
+# from the keymap, so it always matches. An item is one of:
+#   { label = "…", action = "namespace::Action" }   optional: check = "outline" | "preview" | "word_wrap"
+#   { submenu = "…", items = [ … ] }
+#   { submenu = "…", list = "recent" }              items filled by MD++ (recent files)
+#   { separator = true }
+
+[[menu]]
+name = "File"
+items = [
+  { label = "New", action = "mdpp::NewFile" },
+  { label = "Open…", action = "mdpp::OpenFile" },
+  { submenu = "Open Recent", list = "recent" },
+  { label = "Reopen Closed Tab", action = "mdpp::ReopenClosedTab" },
+  { separator = true },
+  { label = "Save", action = "mdpp::Save" },
+  { label = "Save As…", action = "mdpp::SaveAs" },
+  { label = "Save All", action = "mdpp::SaveAll" },
+  { label = "Export as HTML", action = "mdpp::ExportHtml" },
+  { separator = true },
+  { label = "Close Tab", action = "mdpp::CloseTab" },
+  { label = "Close Other Tabs", action = "mdpp::CloseOtherTabs" },
+  { label = "Close Saved Tabs", action = "mdpp::CloseSavedTabs" },
+  { separator = true },
+  { label = "Settings", action = "mdpp::OpenSettings" },
+  { label = "Keyboard Shortcuts", action = "mdpp::OpenKeymap" },
+  { separator = true },
+  { label = "Quit", action = "mdpp::Quit" },
+]
+
+[[menu]]
+name = "Edit"
+items = [
+  { label = "Undo", action = "input::Undo" },
+  { label = "Redo", action = "input::Redo" },
+  { separator = true },
+  { label = "Cut", action = "input::Cut" },
+  { label = "Copy", action = "input::Copy" },
+  { label = "Paste", action = "input::Paste" },
+  { separator = true },
+  { label = "Find", action = "mdpp::Find" },
+  { label = "Replace", action = "mdpp::FindReplace" },
+  { label = "Find Next", action = "mdpp::FindNext" },
+  { label = "Find Previous", action = "mdpp::FindPrevious" },
+  { separator = true },
+  { submenu = "Format", items = [
+    { label = "Bold", action = "mdpp::ToggleBold" },
+    { label = "Italic", action = "mdpp::ToggleItalic" },
+    { label = "Code", action = "mdpp::ToggleCode" },
+    { label = "Strikethrough", action = "mdpp::ToggleStrikethrough" },
+    { label = "Link", action = "mdpp::InsertLink" },
+    { label = "Task", action = "mdpp::ToggleTask" },
+    { separator = true },
+    { label = "Heading Level +1", action = "mdpp::AddHeadingLevel" },
+    { label = "Heading Level −1", action = "mdpp::RemoveHeadingLevel" },
+  ] },
+]
+
+[[menu]]
+name = "Selection"
+items = [
+  { label = "Select All", action = "input::SelectAll" },
+  { separator = true },
+  { label = "Add Cursor Above", action = "input::AddCursorAbove" },
+  { label = "Add Cursor Below", action = "input::AddCursorBelow" },
+  { separator = true },
+  { label = "Duplicate Lines", action = "mdpp::DuplicateLines" },
+  { label = "Delete Lines", action = "mdpp::DeleteLines" },
+  { label = "Move Lines Up", action = "mdpp::MoveLinesUp" },
+  { label = "Move Lines Down", action = "mdpp::MoveLinesDown" },
+]
+
+[[menu]]
+name = "View"
+items = [
+  { label = "Outline", action = "mdpp::ToggleOutline", check = "outline" },
+  { label = "Preview", action = "mdpp::TogglePreview", check = "preview" },
+  { label = "Word Wrap", action = "mdpp::ToggleWordWrap", check = "word_wrap" },
+  { separator = true },
+  { label = "Zoom In", action = "mdpp::ZoomIn" },
+  { label = "Zoom Out", action = "mdpp::ZoomOut" },
+  { label = "Reset Zoom", action = "mdpp::ZoomReset" },
+]
+
+[[menu]]
+name = "Go"
+items = [
+  { label = "Go to Line…", action = "mdpp::GoToLine" },
+  { label = "Go to Definition", action = "input::GoToDefinition" },
+  { separator = true },
+  { label = "Next Tab", action = "mdpp::NextTab" },
+  { label = "Previous Tab", action = "mdpp::PreviousTab" },
+]
+
+[[menu]]
+name = "Help"
+items = [
+  { label = "Keyboard Shortcuts", action = "mdpp::OpenKeymap" },
+  { label = "Report a Bug…", action = "mdpp::ReportBug" },
+]

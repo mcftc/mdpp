@@ -89,6 +89,7 @@ actions!(
         ToggleWordWrap,
         SaveAll,
         ReopenClosedTab,
+        ReportBug,
         CloseOtherTabs,
         CloseTabsToRight,
         CloseSavedTabs,
@@ -223,6 +224,8 @@ pub struct Workspace {
     goto_bar: Entity<GoToLineBar>,
     show_goto: bool,
     show_outline: bool,
+    /// The menu bar beside ≡ is open.
+    show_menu_bar: bool,
     /// Zoom steps from the `font_size` setting.
     zoom: i32,
     /// Word wrap chosen with Alt+Z; `None` follows the settings.
@@ -260,6 +263,7 @@ impl Workspace {
             started,
         } = startup;
         let mut problems = warnings;
+        problems.extend(crate::menus::problems(cx));
         let (changes, changed) = smol::channel::unbounded();
         let watcher = DiskWatcher::new(changes)
             .map_err(|error| problems.push(format!("File changes will not be noticed: {error}")))
@@ -297,6 +301,7 @@ impl Workspace {
             goto_bar,
             show_goto: false,
             show_outline: settings.outline_on_start,
+            show_menu_bar: false,
             zoom: 0,
             wrap: None,
             closed: Vec::new(),
@@ -1194,6 +1199,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::open_recent))
             .on_action(cx.listener(Self::open_settings))
             .on_action(cx.listener(Self::open_keymap))
+            .on_action(cx.listener(Self::report_bug))
             .on_action(cx.listener(Self::convert_eol))
             .on_action(cx.listener(Self::toggle_outline))
             .on_action(cx.listener(Self::export_html))

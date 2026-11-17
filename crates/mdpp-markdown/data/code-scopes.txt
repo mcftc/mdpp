@@ -1,0 +1,62 @@
+# Colours inside fenced code blocks: TextMate scope (what syntect matched) → highlight name of the
+# app theme (`keyword`, `string`, …), so code follows the light/dark theme, not a syntect theme.
+#
+# One row per line: `scope-prefix name`, or `scope-prefix -` for "no colour of its own; the
+# enclosing scope decides". A prefix matches the scope itself and every scope below it
+# (`string` matches `string.quoted.double`). The first matching row wins: specific rows first.
+
+# Delimiters belong to what they delimit; containers have no colour of their own.
+punctuation.definition.string -
+punctuation.definition.comment -
+invalid -
+meta -
+source -
+text -
+
+comment.block.documentation comment.doc
+comment.line.documentation comment.doc
+comment comment
+constant.character.escape string.escape
+string.regexp string.regex
+string string
+constant.numeric number
+constant.language.boolean boolean
+constant constant
+support.constant constant
+entity.name.constant constant
+keyword.operator operator
+keyword.control.import preproc
+keyword keyword
+storage keyword
+entity.name.function function
+support.function function
+variable.function function
+entity.name.type type
+entity.name.class type
+entity.name.struct type
+entity.name.enum type
+entity.name.trait type
+entity.name.interface type
+entity.other.inherited-class type
+support.type type
+support.class type
+entity.name.tag tag
+entity.other.attribute-name attribute
+entity.name.label label
+entity.name.section title
+markup.heading title
+variable.language variable.special
+variable.other.member property
+variable.other.property property
+support.variable.property property
+variable variable
+markup.bold emphasis.strong
+markup.italic emphasis
+markup.underline.link link_uri
+markup.raw text.literal
+markup.list punctuation.list_marker
+punctuation.section punctuation.bracket
+punctuation.definition.block punctuation.bracket
+punctuation.separator punctuation.delimiter
+punctuation.terminator punctuation.delimiter
+punctuation punctuation

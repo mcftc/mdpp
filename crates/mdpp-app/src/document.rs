@@ -16,10 +16,11 @@ use mdpp_core::settings::Level;
 use mdpp_core::settings::Settings;
 use mdpp_core::text::{self, Encoding, Eol, Fingerprint, UTF_8};
 use mdpp_lang::FileSystem;
+use mdpp_markdown::code::CodeColors;
 use mdpp_markdown::{DocIndex, blocks};
 
 use crate::completion::{MdCompletions, SharedIndex};
-use crate::highlight::{self, SharedLexer};
+use crate::highlight::{self, SharedCodeColors, SharedLexer};
 use crate::navigation::MdNavigation;
 use crate::preview::Preview;
 
@@ -179,6 +180,8 @@ pub struct Document {
     editor: Entity<EditorState>,
     /// The highlighter's per-line block state, also used by editing assists and completion.
     lexer: SharedLexer,
+    /// Colours of the fenced code blocks, shared with the highlighter and the preview.
+    code_colors: SharedCodeColors,
     preview: Entity<Preview>,
     preview_visible: bool,
     /// Editor line the preview was last synced to.
@@ -209,6 +212,7 @@ pub struct Document {
     word_count: usize,
     index: SharedIndex,
     _analysis: Task<()>,
+    _coloring: Task<()>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -229,6 +233,7 @@ impl Document {
         let dirty = !saved.matches(doc.text.len(), [doc.text.as_str()]);
         let disk_stamp = doc.path.as_deref().and_then(FileStamp::of);
         let lexer = SharedLexer::default();
+        let code_colors = SharedCodeColors::default();
         let index = SharedIndex::default();
         let soft_wrap = settings.soft_wrap && doc.text.len() <= settings.soft_wrap_max_bytes;
 
@@ -244,7 +249,7 @@ impl Document {
                 state.set_cursor_position(Position::new(line, column), window, cx);
             }
             state.set_highlighter_factory(
-                highlight::factory(lexer.clone(), settings.markup_fade),
+                highlight::factory(lexer.clone(), code_colors.clone(), settings.markup_fade),
                 cx,
             );
             state.lsp_mut().completion_provider = Some(Rc::new(MdCompletions::new(
@@ -256,8 +261,13 @@ impl Document {
             state.lsp_mut().definition_provider = Some(navigation.clone());
             state.lsp_mut().hover_provider = Some(navigation);
         });
-        let preview =
-            cx.new(|_| Preview::new(settings.preview_max_width, settings.preview_remote_images));
+        let preview = cx.new(|_| {
+            Preview::new(
+                settings.preview_max_width,
+                settings.preview_remote_images,
+                code_colors.clone(),
+            )
+        });
 
         let subscriptions = vec![
             cx.subscribe_in(
@@ -281,6 +291,7 @@ impl Document {
         let mut this = Self {
             editor,
             lexer,
+            code_colors,
             preview,
             preview_visible: false,
             synced_line: None,
@@ -304,6 +315,7 @@ impl Document {
             word_count: 0,
             index,
             _analysis: Task::ready(()),
+            _coloring: Task::ready(()),
             _subscriptions: subscriptions,
         };
         this.schedule_analysis(cx);
@@ -316,6 +328,11 @@ impl Document {
 
     pub fn preview(&self) -> &Entity<Preview> {
         &self.preview
+    }
+
+    /// The latest colours of the fenced code blocks.
+    pub fn code_colors(&self) -> Arc<CodeColors> {
+        self.code_colors.borrow().clone()
     }
 
     /// Whether the cursor is in ordinary Markdown (not a code block, front matter, comment or math).
@@ -720,9 +737,32 @@ impl Document {
         self.schedule_analysis(cx); // relative links resolve against the (new) folder
     }
 
+    /// Colour the fenced code blocks on a snapshot after the debounce, reusing the blocks that did
+    /// not change. Separate from the analysis so a document full of code does not hold up the
+    /// outline and diagnostics.
+    fn schedule_coloring(&mut self, cx: &mut Context<Self>) {
+        let delay = self.settings.structure_debounce;
+        let max_lines = self.settings.code_highlight_max_lines;
+        let text = self.editor.read(cx).text().clone();
+        let previous = self.code_colors.borrow().clone();
+        self._coloring = cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(delay).await;
+            let colors = cx
+                .background_spawn(async move { CodeColors::build(&text, &previous, max_lines) })
+                .await;
+            this.update(cx, |this, cx| {
+                *this.code_colors.borrow_mut() = Arc::new(colors);
+                this.editor.update(cx, |_, cx| cx.notify());
+                this.preview.update(cx, |_, cx| cx.notify());
+            })
+            .ok();
+        });
+    }
+
     /// Rebuild the index, diagnostics and (when visible) the preview on a snapshot after the
     /// debounce (PLAN §3.2).
     fn schedule_analysis(&mut self, cx: &mut Context<Self>) {
+        self.schedule_coloring(cx);
         let revision = self.revision;
         let delay = self.settings.structure_debounce;
         let doc_dir = self.doc_dir();

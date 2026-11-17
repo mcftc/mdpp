@@ -2,15 +2,21 @@
 //! a virtual list, so only visible blocks are laid out. Each top-level block knows its source
 //! range; scroll sync maps an editor line to the block containing it.
 
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use gpui_kit::component::highlighter::HighlightTheme;
+use gpui_kit::component::input::HighlightStyleResolver as _;
 use gpui_kit::component::{ActiveTheme, h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use mdpp_markdown::blocks::{
     self, AlertKind, Alignment, Block, BlockKind, InlineStyle, Inlines, Segment,
 };
+use mdpp_markdown::code::{self, CodeColors};
+
+use crate::highlight::SharedCodeColors;
 
 /// Pixels rendered beyond the viewport so fast scrolling does not show blank space.
 const OVERDRAW: f32 = 600.0;
@@ -25,16 +31,19 @@ pub struct Preview {
     doc_dir: Option<PathBuf>,
     max_width: Pixels,
     remote_images: bool,
+    /// The document's code colours (the editor's, found by content here too).
+    code_colors: SharedCodeColors,
 }
 
 impl Preview {
-    pub fn new(max_width: f32, remote_images: bool) -> Self {
+    pub fn new(max_width: f32, remote_images: bool, code_colors: SharedCodeColors) -> Self {
         Self {
             blocks: Arc::default(),
             list: ListState::new(0, ListAlignment::Top, px(OVERDRAW)),
             doc_dir: None,
             max_width: px(max_width),
             remote_images,
+            code_colors,
         }
     }
 
@@ -85,7 +94,8 @@ impl Preview {
         let Some(block) = self.blocks.get(index) else {
             return div().into_any_element();
         };
-        let style = Palette::new(cx, self.doc_dir.as_deref(), self.remote_images);
+        let code = self.code_colors.borrow().clone();
+        let style = Palette::new(cx, self.doc_dir.as_deref(), self.remote_images, code);
         div()
             .w_full()
             .flex()
@@ -133,10 +143,17 @@ struct Palette<'a> {
     font_size: Pixels,
     doc_dir: Option<&'a Path>,
     remote_images: bool,
+    code: Arc<CodeColors>,
+    syntax: Arc<HighlightTheme>,
 }
 
 impl<'a> Palette<'a> {
-    fn new(cx: &App, doc_dir: Option<&'a Path>, remote_images: bool) -> Self {
+    fn new(
+        cx: &App,
+        doc_dir: Option<&'a Path>,
+        remote_images: bool,
+        code: Arc<CodeColors>,
+    ) -> Self {
         let theme = cx.theme();
         Self {
             muted: theme.muted_foreground,
@@ -154,7 +171,30 @@ impl<'a> Palette<'a> {
             font_size: theme.font_size,
             doc_dir,
             remote_images,
+            code,
+            syntax: theme.highlight_theme.clone(),
         }
+    }
+
+    /// Theme styles for a code block's colours: the whole block if the background run coloured
+    /// this exact text, otherwise line by line.
+    fn code_highlights(&self, language: &str, text: &str) -> Vec<(Range<usize>, HighlightStyle)> {
+        let block = self.code.block(code::block_key(language, text.lines()));
+        let mut out = Vec::new();
+        let mut offset = 0;
+        for (index, line) in text.split_inclusive('\n').enumerate() {
+            let code = line.trim_end_matches(['\n', '\r']);
+            let spans = block
+                .and_then(|lines| lines.get(index))
+                .or_else(|| self.code.line(language, code));
+            for (range, name) in spans.into_iter().flatten() {
+                if let Some(style) = self.syntax.style(name) {
+                    out.push((offset + range.start..offset + range.end, style));
+                }
+            }
+            offset += line.len();
+        }
+        out
     }
 
     fn alert(&self, kind: AlertKind) -> (Hsla, &'static str) {
@@ -222,7 +262,14 @@ fn render_block(block: &Block, p: &Palette) -> AnyElement {
             .when_some(language.clone(), |d, language| {
                 d.child(div().text_xs().text_color(p.muted).child(language))
             })
-            .child(text.clone())
+            .child(
+                StyledText::new(text.clone()).with_highlights(
+                    language
+                        .as_deref()
+                        .map(|language| p.code_highlights(language, text))
+                        .unwrap_or_default(),
+                ),
+            )
             .into_any_element(),
         BlockKind::Quote { alert, blocks } => {
             let (color, title) = match alert {

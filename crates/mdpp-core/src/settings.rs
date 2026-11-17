@@ -25,6 +25,7 @@ pub struct Settings {
     pub line_numbers: bool,
     pub font_size: f32,
     pub markup_fade: f32,
+    pub code_highlight_max_lines: usize,
     /// Two-character strings: opening and closing character.
     pub auto_close_pairs: Vec<String>,
     pub hot_exit: bool,

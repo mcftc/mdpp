@@ -8,16 +8,18 @@
 //! * [`slug`] — GitHub-compatible heading anchors.
 //! * [`blocks`] — the document as blocks with source ranges, for the preview (PLAN D6).
 //! * [`export`] — self-contained HTML.
+//! * [`code`] — colours inside fenced code blocks (syntect, PLAN D5).
 //!
 //! This crate never depends on a UI toolkit; it works on [`ropey::Rope`] snapshots and `&str`.
 
 pub mod blocks;
+pub mod code;
 pub mod export;
 pub mod highlight;
 pub mod index;
 pub mod slug;
 
-pub use highlight::{BlockState, Highlighter, Token, TokenKind};
+pub use highlight::{BlockState, FencedBlock, Highlighter, Token, TokenKind};
 pub use index::{
     BrokenReference, DocIndex, Footnote, Heading, Link, LinkKind, ReferenceDefinition,
     normalize_label,

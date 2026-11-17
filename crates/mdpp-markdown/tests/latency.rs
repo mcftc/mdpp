@@ -53,3 +53,31 @@ fn one_megabyte_parses_within_budget() {
         "preview blocks {preview:?} over {PREVIEW_BUDGET:?}"
     );
 }
+
+/// Fenced-code colouring (PLAN D5): what loading the syntax set costs (once, in the background)
+/// and how long a code block takes per line — the basis of the `code_highlight_max_lines` default.
+#[test]
+#[ignore = "timing; run explicitly with --release"]
+fn code_highlighting_cost() {
+    use mdpp_markdown::code;
+    let started = Instant::now();
+    let syntaxes = code::load();
+    let load = started.elapsed();
+    let rust: Vec<String> = (0..1000)
+        .map(|n| {
+            format!(
+                "    let value_{n}: Vec<u32> = items.iter().map(|x| x * {n}).collect(); // note {n}"
+            )
+        })
+        .collect();
+    let per_language = ["rust", "python", "js", "json", "bash", "yaml"].map(|language| {
+        let time = p50(|| {
+            code::highlight_lines(syntaxes, language, rust.iter().map(String::as_str));
+        });
+        format!(
+            "{language} {:.1} µs/line",
+            time.as_secs_f64() * 1e6 / rust.len() as f64
+        )
+    });
+    println!("syntax set load {load:?}; {}", per_language.join(", "));
+}

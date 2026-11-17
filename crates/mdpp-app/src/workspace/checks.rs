@@ -318,6 +318,42 @@ impl Workspace {
         let Some(document) = document else {
             return;
         };
+        // Fenced code is coloured in the background after opening (the file has ```rust fn main() {}).
+        let colored = document.read_with(cx, |doc, cx| {
+            use gpui_kit::component::input::HighlightStyleResolver as _;
+            let colors = doc.code_colors();
+            let key = mdpp_markdown::code::block_key("rust", ["fn main() {}"]);
+            let line = colors
+                .block(key)
+                .and_then(|lines| lines.first().cloned())
+                .unwrap_or_default();
+            let keyword = line
+                .iter()
+                .any(|(r, name)| *name == "keyword" && *r == (0..2));
+            let themed = cx.theme().highlight_theme.style("keyword").is_some();
+            format!(
+                "block_colored={} fn_is_keyword={keyword} theme_styles_keyword={themed}",
+                !line.is_empty()
+            )
+        });
+        println!("BENCH check code_colors {colored}");
+        // Every menu item reaches a handler from the editor (a menu entry that does nothing is a bug).
+        let menus = editor
+            .update_in(cx, |state, window, cx| {
+                state.focus(window, cx);
+                let dead: Vec<&str> = crate::menus::actions()
+                    .filter(|name| {
+                        cx.build_action(name, None)
+                            .map_or(true, |action| !window.is_action_available(&*action, cx))
+                    })
+                    .collect();
+                format!(
+                    "problems={} unhandled={dead:?}",
+                    crate::menus::problems(cx).len()
+                )
+            })
+            .unwrap_or_default();
+        println!("BENCH check menus {menus}");
         let path = document.read_with(cx, |doc, _| doc.path().map(PathBuf::from));
         let before = path.as_ref().and_then(|p| std::fs::read(p).ok());
         editor

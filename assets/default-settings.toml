@@ -22,6 +22,9 @@ line_numbers = true
 font_size = 13
 # How much Markdown markup (#, **, brackets) recedes: 0 = not at all, 1 = invisible.
 markup_fade = 0.45
+# Fenced code blocks are coloured in the background after a typing pause, at about 0.1–0.5 ms
+# a line; past this many code lines in a document, further blocks stay plain.
+code_highlight_max_lines = 5000
 # Typing the first character inserts the second (each entry: opening + closing character).
 # Quotes and * are left out: apostrophes and list bullets would trigger them in prose.
 auto_close_pairs = ["()", "[]", "{}", "``"]

@@ -166,6 +166,130 @@ impl Highlighter {
         let next = (row + 1 < self.states.len()).then(|| Cow::from(text.line(row + 1, LINES)));
         tokens_for_line(state, &line, next.as_deref(), row)
     }
+
+    /// The fenced code block whose content includes `row` (not its fences), if any.
+    pub fn fenced_block_at(&self, text: &Rope, row: usize) -> Option<FencedBlock> {
+        let in_code = |r: usize| matches!(self.state_at(r), BlockState::FencedCode { .. });
+        if !in_code(row) || self.states.len() != text.len_lines(LINES) {
+            return None;
+        }
+        let BlockState::FencedCode { fence, len } = self.state_at(row) else {
+            return None;
+        };
+        let line = |r: usize| Cow::from(text.line(r, LINES));
+        let is_close = |r: usize| {
+            is_fence_close(
+                strip_containers(line(r).trim_end_matches(['\n', '\r'])),
+                fence,
+                len,
+            )
+        };
+        if is_close(row) {
+            return None;
+        }
+        // The opening fence is the nearest row above that does not start inside the block.
+        let open = (0..row).rev().find(|&r| !in_code(r))?;
+        let (quotes, indent, language) = open_fence(line(open).trim_end_matches(['\n', '\r']))?;
+        let mut end = row + 1;
+        while end < self.states.len() && in_code(end) && !is_close(end) {
+            end += 1;
+        }
+        Some(FencedBlock {
+            language,
+            rows: open + 1..end,
+            quotes,
+            indent,
+        })
+    }
+
+    /// Every fenced code block with at least one content line, in document order.
+    pub fn fenced_blocks(&self, text: &Rope) -> Vec<FencedBlock> {
+        let mut blocks = Vec::new();
+        let mut row = 0;
+        while row < self.states.len() {
+            match self.fenced_block_at(text, row) {
+                Some(block) => {
+                    row = block.rows.end;
+                    blocks.push(block);
+                }
+                None => row += 1,
+            }
+        }
+        blocks
+    }
+}
+
+/// A fenced code block as the lexer sees it: its language, its content rows, and how much of each
+/// content line is container (blockquote markers, the fence's indentation) rather than code.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FencedBlock {
+    /// First word of the info string; empty when there is none.
+    pub language: String,
+    /// Rows between the fences (to the end of the document when the block is never closed).
+    pub rows: Range<usize>,
+    /// Blockquote markers around the opening fence.
+    quotes: usize,
+    /// Indentation of the opening fence inside its quotes (list items included); content lines
+    /// lose up to this many spaces, as CommonMark specifies.
+    indent: usize,
+}
+
+impl FencedBlock {
+    /// Byte offset where the code starts in one of this block's lines.
+    pub fn code_start(&self, line: &str) -> usize {
+        let (pos, _) = skip_quotes(line, self.quotes);
+        let spaces = line[pos..]
+            .bytes()
+            .take(self.indent)
+            .take_while(|&b| b == b' ')
+            .count();
+        pos + spaces
+    }
+
+    /// The code on `row` (one of [`Self::rows`]), without its line break.
+    pub fn code_line<'a>(&self, text: &'a Rope, row: usize) -> Cow<'a, str> {
+        let line = Cow::from(text.line(row, LINES));
+        let end = line.trim_end_matches(['\n', '\r']).len();
+        match line {
+            Cow::Borrowed(line) => Cow::Borrowed(&line[self.code_start(line)..end]),
+            Cow::Owned(line) => Cow::Owned(line[self.code_start(&line)..end].to_string()),
+        }
+    }
+}
+
+/// Skip up to `max` blockquote markers (each with the indentation before it and one space after
+/// it); returns the offset after them and how many there were.
+fn skip_quotes(line: &str, max: usize) -> (usize, usize) {
+    let mut pos = 0;
+    let mut quotes = 0;
+    while quotes < max {
+        let at = pos + leading_whitespace(&line[pos..]);
+        if line.as_bytes().get(at) != Some(&b'>') {
+            break;
+        }
+        pos = at + 1;
+        if line.as_bytes().get(pos) == Some(&b' ') {
+            pos += 1;
+        }
+        quotes += 1;
+    }
+    (pos, quotes)
+}
+
+/// Quote depth, fence indentation and language of an opening fence line.
+fn open_fence(line: &str) -> Option<(usize, usize, String)> {
+    let (pos, quotes) = skip_quotes(line, usize::MAX);
+    let rest = &line[pos..];
+    let mut start = leading_whitespace(rest);
+    if let Some(marker) = list_marker(&rest[start..]) {
+        start += marker;
+        start += leading_whitespace(&rest[start..]);
+    }
+    let body = &rest[start..];
+    let (fence, len) = fence_open(body)?;
+    let info = &body[run_of(body, fence).max(usize::from(len))..];
+    let language = info.split_whitespace().next().unwrap_or_default();
+    Some((quotes, start, language.to_string()))
 }
 
 /// The state at the start of the line after `line`, given the state at its start.

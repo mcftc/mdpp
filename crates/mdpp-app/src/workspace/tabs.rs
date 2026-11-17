@@ -1,10 +1,14 @@
-//! Tabs and files (PLAN §4.1, §6.1): the tab bar with the app menu and a menu per tab, closing
+//! Tabs and files (PLAN §4.1, §6.1): the tab bar with the menu bar (≡) and a menu per tab, closing
 //! several tabs, reopening closed ones, save all, recent files, dropped files, the settings and
 //! keymap files, and asking about unsaved changes when hot exit is off.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use gpui_kit::component::menu::{ContextMenuExt as _, PopupMenu};
+use gpui_kit::component::Selectable as _;
+use gpui_kit::component::menu::ContextMenuExt as _;
+
+use crate::menus;
 
 use super::*;
 
@@ -305,65 +309,82 @@ impl Workspace {
         self.open_config_file(path, mdpp_core::keymap::user_template, window, cx);
     }
 
-    /// The ≡ menu: every command with its shortcut, so nothing depends on knowing the keys.
-    fn app_menu(&self, cx: &App) -> impl IntoElement {
+    /// ≡ and, once clicked, the menu bar beside it (File · Edit · …) as in Zed: short menus
+    /// instead of one long list. Clicking ≡ again folds it away.
+    fn app_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let focus = self.active_document().read(cx).editor().focus_handle(cx);
-        let recent = self.recent.clone();
-        let (outline, preview) = (self.show_outline, self.show_preview);
-        let wrap = self.active_document().read(cx).soft_wrap();
-        Button::new("app-menu")
-            .icon(IconName::Menu)
-            .ghost()
-            .small()
-            .tooltip("Menu")
-            .dropdown_menu(move |menu, window, cx| {
-                menu.action_context(focus.clone())
-                    .menu("New", Box::new(NewFile))
-                    .menu("Open…", Box::new(OpenFile))
-                    .submenu("Open Recent", window, cx, {
-                        let recent = recent.clone();
-                        move |menu, _, _| recent_menu(menu, &recent)
-                    })
-                    .menu("Reopen Closed Tab", Box::new(ReopenClosedTab))
-                    .separator()
-                    .menu("Save", Box::new(Save))
-                    .menu("Save As…", Box::new(SaveAs))
-                    .menu("Save All", Box::new(SaveAll))
-                    .menu("Export as HTML", Box::new(ExportHtml))
-                    .separator()
-                    .menu("Find", Box::new(Find))
-                    .menu("Replace", Box::new(FindReplace))
-                    .menu("Go to Line…", Box::new(GoToLine))
-                    .submenu("Format", window, cx, |menu, _, _| {
-                        menu.menu("Bold", Box::new(ToggleBold))
-                            .menu("Italic", Box::new(ToggleItalic))
-                            .menu("Code", Box::new(ToggleCode))
-                            .menu("Strikethrough", Box::new(ToggleStrikethrough))
-                            .menu("Link", Box::new(InsertLink))
-                            .menu("Task", Box::new(ToggleTask))
-                            .separator()
-                            .menu("Heading Level +1", Box::new(AddHeadingLevel))
-                            .menu("Heading Level −1", Box::new(RemoveHeadingLevel))
-                    })
-                    .submenu("Lines", window, cx, |menu, _, _| {
-                        menu.menu("Duplicate", Box::new(DuplicateLines))
-                            .menu("Delete", Box::new(DeleteLines))
-                            .menu("Move Up", Box::new(MoveLinesUp))
-                            .menu("Move Down", Box::new(MoveLinesDown))
-                    })
-                    .separator()
-                    .menu_with_check("Outline", outline, Box::new(ToggleOutline))
-                    .menu_with_check("Preview", preview, Box::new(TogglePreview))
-                    .menu_with_check("Word Wrap", wrap, Box::new(ToggleWordWrap))
-                    .menu("Zoom In", Box::new(ZoomIn))
-                    .menu("Zoom Out", Box::new(ZoomOut))
-                    .menu("Reset Zoom", Box::new(ZoomReset))
-                    .separator()
-                    .menu("Settings", Box::new(OpenSettings))
-                    .menu("Keyboard Shortcuts", Box::new(OpenKeymap))
-                    .separator()
-                    .menu("Quit", Box::new(Quit))
+        let state = Rc::new(self.menu_state(cx));
+        h_flex()
+            .gap_0p5()
+            .child(
+                Button::new("app-menu")
+                    .icon(IconName::Menu)
+                    .ghost()
+                    .small()
+                    .tooltip("Menu")
+                    .selected(self.show_menu_bar)
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.show_menu_bar = !this.show_menu_bar;
+                        cx.notify();
+                    })),
+            )
+            .when(self.show_menu_bar, |row| {
+                row.children(menus::names().enumerate().map(|(index, name)| {
+                    let (state, focus) = (state.clone(), focus.clone());
+                    Button::new(("menu-bar", index))
+                        .label(name)
+                        .ghost()
+                        .small()
+                        .dropdown_menu(move |menu, window, cx| {
+                            let menu = menu.action_context(focus.clone());
+                            menus::fill(menu, index, &state, window, cx)
+                        })
+                }))
             })
+    }
+
+    /// Check marks and the recent files, as the menus show them.
+    fn menu_state(&self, cx: &App) -> menus::MenuState {
+        let wrap = self.active_document().read(cx).soft_wrap();
+        let checked = [
+            (menus::CHECK_OUTLINE, self.show_outline),
+            (menus::CHECK_PREVIEW, self.show_preview),
+            (menus::CHECK_WORD_WRAP, wrap),
+        ]
+        .into_iter()
+        .filter_map(|(name, on)| on.then_some(name))
+        .collect();
+        let recent = self
+            .recent
+            .iter()
+            .map(|path| {
+                let action: Box<dyn Action> = Box::new(OpenRecent { path: path.clone() });
+                (recent_label(path), action)
+            })
+            .collect();
+        menus::MenuState {
+            checked,
+            lists: HashMap::from([(menus::LIST_RECENT, recent)]),
+        }
+    }
+
+    /// Help ▸ Report a Bug: GitHub's issue form with the version and system filled in. Nothing is
+    /// sent until the user submits the form.
+    pub(super) fn report_bug(&mut self, _: &ReportBug, _: &mut Window, cx: &mut Context<Self>) {
+        let session = std::env::var("XDG_SESSION_TYPE")
+            .map(|kind| format!(" ({kind})"))
+            .unwrap_or_default();
+        let system = format!(
+            "{}, {} {}{session}",
+            env!("CARGO_PKG_VERSION"),
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        );
+        cx.open_url(&format!(
+            "{}/issues/new?template=bug.yml&version={}",
+            env!("CARGO_PKG_REPOSITORY"),
+            percent_encode(&system)
+        ));
     }
 
     pub(super) fn render_tabs(&self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -427,23 +448,27 @@ impl Workspace {
     }
 }
 
-/// Recent files, most recent first, labelled by name with the folder after it.
-fn recent_menu(menu: PopupMenu, recent: &[PathBuf]) -> PopupMenu {
-    if recent.is_empty() {
-        return menu.label("No recent files");
-    }
-    recent.iter().fold(menu, |menu, path| {
-        let name = path.file_name().map_or_else(
-            || path.display().to_string(),
-            |n| n.to_string_lossy().into_owned(),
-        );
-        let folder = path
-            .parent()
-            .map(|p| p.display().to_string())
-            .unwrap_or_default();
-        menu.menu(
-            format!("{name} — {folder}"),
-            Box::new(OpenRecent { path: path.clone() }),
-        )
-    })
+/// A recent file as the menu shows it: its name, then its folder.
+fn recent_label(path: &Path) -> String {
+    let name = path.file_name().map_or_else(
+        || path.display().to_string(),
+        |n| n.to_string_lossy().into_owned(),
+    );
+    let folder = path
+        .parent()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
+    format!("{name} — {folder}")
+}
+
+/// Encode `text` for a URL query value (RFC 3986: unreserved characters stay as they are).
+fn percent_encode(text: &str) -> String {
+    text.bytes()
+        .map(|b| match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~' => {
+                char::from(b).to_string()
+            }
+            _ => format!("%{b:02X}"),
+        })
+        .collect()
 }

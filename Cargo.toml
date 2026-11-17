@@ -34,6 +34,10 @@ chardetng = "1"
 interprocess = "2"
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 smol = "2"
+# Fenced-code highlighting (PLAN D5): the parser and bat's ~200 syntaxes, pure-Rust regex — the
+# same crates and features gpui-component's own `syntect` feature uses, so they are never doubled.
+syntect = { version = "5.3", default-features = false, features = ["parsing", "regex-fancy"] }
+two-face = { version = "0.4.5", default-features = false, features = ["syntect-fancy"] }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

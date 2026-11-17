@@ -10,8 +10,9 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Tabs (close others / to the right / saved, reopen closed), open/save/save all, recent files,
   drag-and-drop, encodings (UTF-8/16, legacy code pages, reopen/save with), line-ending conversion
 - Hot exit: quit any time; tabs and unsaved text come back next start (off: asks before closing)
-- Every command in the ≡ menu with its shortcut; go to line, zoom, word wrap, line commands
-- Markdown highlighting, completions (anchors, paths, references, emoji, fences, alerts), diagnostics
+- ≡ opens a menu bar (File · Edit · Selection · View · Go · Help) with every command and its
+  shortcut; go to line, zoom, word wrap, line commands
+- Markdown highlighting with coloured code blocks (~200 languages, theme colours), completions (anchors, paths, references, emoji, fences, alerts), diagnostics
   (missing headings and files, undefined or unused references, duplicate footnotes; each one's
   severity is a setting), go to definition and hover for links and footnotes
 - List continuation and Tab/Shift+Tab nesting, formatting toggles, heading levels, links (paste a
@@ -42,8 +43,9 @@ Try typing `](#`, `](`, `:roc`, ```` ``` ```` or `> [!` in a document.
 | Ctrl+Shift+T | reopen closed tab | right-click a tab | close others / to the right / saved |
 
 All bindings are in [`assets/default-keymap.toml`](assets/default-keymap.toml); settings and their
-defaults in [`assets/default-settings.toml`](assets/default-settings.toml). *≡ → Settings* and
-*≡ → Keyboard Shortcuts* open your own files, created with every default commented out.
+defaults in [`assets/default-settings.toml`](assets/default-settings.toml); the menus in
+[`assets/menus.toml`](assets/menus.toml). *≡ → File → Settings* and *Keyboard Shortcuts* open your
+own files, created with every default commented out. *Help → Report a Bug* opens a pre-filled issue.
 
 - [Development plan](docs/PLAN.md) · [Research summary](docs/RESEARCH.md) · [Progress](docs/PROGRESS.md)
 - [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)

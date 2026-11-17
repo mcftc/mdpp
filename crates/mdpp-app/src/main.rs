@@ -11,6 +11,7 @@ mod document;
 mod find;
 mod goto;
 mod highlight;
+mod menus;
 mod navigation;
 mod preview;
 mod watch;
