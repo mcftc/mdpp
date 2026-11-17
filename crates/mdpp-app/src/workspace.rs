@@ -1237,6 +1237,7 @@ impl Render for Workspace {
                 this.open_paths(paths.paths().to_vec(), window, cx)
             }))
             .bg(cx.theme().background)
+            .when(self.show_menu_bar, |root| root.child(self.render_menu_bar(cx)))
             .child(self.render_tabs(cx))
             .when_some(conflict, |root, conflict| {
                 root.child(self.render_conflict(conflict, cx))

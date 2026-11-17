@@ -353,7 +353,15 @@ impl Workspace {
                 )
             })
             .unwrap_or_default();
-        println!("BENCH check menus {menus}");
+        // The menu bar row stays shown for the rest of the check, so every later frame draws it.
+        let shown = this
+            .update(cx, |this, cx| {
+                this.show_menu_bar = true;
+                cx.notify();
+                this.show_menu_bar
+            })
+            .unwrap_or(false);
+        println!("BENCH check menus {menus} menu_bar_shown={shown}");
         let path = document.read_with(cx, |doc, _| doc.path().map(PathBuf::from));
         let before = path.as_ref().and_then(|p| std::fs::read(p).ok());
         editor

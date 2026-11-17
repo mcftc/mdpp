@@ -377,38 +377,43 @@ impl Workspace {
         self.open_config_file(path, mdpp_core::keymap::user_template, window, cx);
     }
 
-    /// ≡ and, once clicked, the menu bar beside it (File · Edit · …) as in Zed: short menus
-    /// instead of one long list. Clicking ≡ again folds it away.
-    fn app_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    /// ≡ in the tab row: shows or hides the menu bar above the tabs.
+    fn menu_toggle(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        Button::new("app-menu")
+            .icon(IconName::Menu)
+            .ghost()
+            .small()
+            .tooltip("Menu")
+            .selected(self.show_menu_bar)
+            .on_click(cx.listener(|this, _, _, cx| {
+                this.show_menu_bar = !this.show_menu_bar;
+                cx.notify();
+            }))
+    }
+
+    /// The menu bar (File · Edit · …) as in Zed: short menus instead of one long list, in a row
+    /// of its own above the tabs so the two never run together.
+    pub(super) fn render_menu_bar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let focus = self.active_document().read(cx).editor().focus_handle(cx);
         let state = Rc::new(self.menu_state(cx));
         h_flex()
+            .w_full()
+            .px_1()
             .gap_0p5()
-            .child(
-                Button::new("app-menu")
-                    .icon(IconName::Menu)
+            .bg(cx.theme().title_bar)
+            .border_b_1()
+            .border_color(cx.theme().title_bar_border)
+            .children(menus::names().enumerate().map(|(index, name)| {
+                let (state, focus) = (state.clone(), focus.clone());
+                Button::new(("menu-bar", index))
+                    .label(name)
                     .ghost()
                     .small()
-                    .tooltip("Menu")
-                    .selected(self.show_menu_bar)
-                    .on_click(cx.listener(|this, _, _, cx| {
-                        this.show_menu_bar = !this.show_menu_bar;
-                        cx.notify();
-                    })),
-            )
-            .when(self.show_menu_bar, |row| {
-                row.children(menus::names().enumerate().map(|(index, name)| {
-                    let (state, focus) = (state.clone(), focus.clone());
-                    Button::new(("menu-bar", index))
-                        .label(name)
-                        .ghost()
-                        .small()
-                        .dropdown_menu(move |menu, window, cx| {
-                            let menu = menu.action_context(focus.clone());
-                            menus::fill(menu, index, &state, window, cx)
-                        })
-                }))
-            })
+                    .dropdown_menu(move |menu, window, cx| {
+                        let menu = menu.action_context(focus.clone());
+                        menus::fill(menu, index, &state, window, cx)
+                    })
+            }))
     }
 
     /// Check marks and the recent files, as the menus show them.
@@ -507,7 +512,7 @@ impl Workspace {
             })
             .collect();
         TabBar::new("documents")
-            .prefix(div().px_1().child(self.app_menu(cx)))
+            .prefix(div().px_1().child(self.menu_toggle(cx)))
             .selected_index(self.active)
             .on_click(
                 cx.listener(|this, index: &usize, window, cx| this.activate(*index, window, cx)),

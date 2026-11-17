@@ -302,7 +302,7 @@ grown too long. Changes, smallest first:
 
 | Part | Content | Release |
 |---|---|---|
-| Menu bar | ≡ opens a row of short menus *File · Edit · Selection · View · Go · Help* in place (as in Zed), built from `assets/menus.toml`; each item shows its shortcut from the keymap. Everything else stays where it is. | MVP |
+| Menu bar | ≡ opens a row of short menus *File · Edit · Selection · View · Go · Help* in a row of its own above the tabs (as in Zed; in the tab row it ran into the tabs), built from `assets/menus.toml`; each item shows its shortcut from the keymap. Everything else stays where it is. | MVP |
 | Settings window | Zed-like: search, category sidebar, one row per setting with its description and a control (switch, dropdown, number, text). **Metadata-driven**: names, defaults and descriptions come from `default-settings.toml`, categories and controls from a small UI table; a change is written to the user's `settings.toml` (format-preserving) and hot reload applies it. "Edit in settings.toml" opens the file. | MVP |
 | Small Zed touches, only if wanted | back/forward jump history (Alt+←/→), breadcrumb (file › heading), icon toggles in the status bar | MVP (breadcrumb), later |
 | Zed features | command palette (Ctrl+Shift+P), quick open (Ctrl+P), theme selector, folder panel, find in files, split panes | v1.0 (palette, quick open, theme selector first) |
