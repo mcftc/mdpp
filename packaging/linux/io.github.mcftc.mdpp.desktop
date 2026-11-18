@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=MD++
+GenericName=Markdown Editor
+Comment=Fast Markdown editor with intellisense
+Exec=mdpp %F
+Icon=io.github.mcftc.mdpp
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/markdown;text/x-markdown;
+Keywords=markdown;md;editor;notes;notepad;
+StartupWMClass=io.github.mcftc.mdpp
+StartupNotify=true

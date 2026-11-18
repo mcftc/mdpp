@@ -503,6 +503,24 @@ impl Workspace {
             })
             .unwrap_or(false);
         println!("BENCH check focus_mode drawn={drawn}");
+        // Dragging a tab onto another moves it there; the active tab stays active.
+        let moved = this
+            .update_in(cx, |this, window, cx| {
+                this.add_document(OpenedDoc::untitled(None), window, cx);
+                let before: Vec<_> = this.documents.clone();
+                let active = this.documents[this.active].clone();
+                let last = before.len() - 1;
+                this.move_tab(0, last, cx);
+                let ok = this.documents[last] == before[0]
+                    && this.documents[this.active] == active
+                    && before.len() > 1;
+                this.move_tab(last, 0, cx);
+                let back = this.documents == before;
+                this.close_tab(&CloseTab, window, cx); // the untitled one, active
+                ok && back
+            })
+            .unwrap_or(false);
+        println!("BENCH check tabs moved={moved}");
         let path = document.read_with(cx, |doc, _| doc.path().map(PathBuf::from));
         let before = path.as_ref().and_then(|p| std::fs::read(p).ok());
         editor

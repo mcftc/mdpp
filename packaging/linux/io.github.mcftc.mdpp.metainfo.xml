@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mcftc.mdpp</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <name>MD++</name>
+  <summary>Fast Markdown editor with intellisense</summary>
+  <description>
+    <p>
+      MD++ is a free, lightweight Markdown editor in the spirit of Notepad++: it opens instantly,
+      never loses unsaved text, and understands Markdown as you type.
+    </p>
+    <ul>
+      <li>Completion for headings, files, references, emoji and code-block languages</li>
+      <li>Diagnostics for broken links, missing headings and uneven tables</li>
+      <li>Live preview with scroll sync, outline, folder panel and find in files</li>
+      <li>Table, list and formatting assists, rename heading, code actions and snippets</li>
+      <li>Hot exit: quit any time, everything comes back</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">io.github.mcftc.mdpp.desktop</launchable>
+  <url type="homepage">https://github.com/mcftc/mdpp</url>
+  <url type="bugtracker">https://github.com/mcftc/mdpp/issues</url>
+  <developer id="io.github.mcftc">
+    <name>MD++ contributors</name>
+  </developer>
+  <content_rating type="oars-1.1"/>
+  <provides>
+    <binary>mdpp</binary>
+    <mediatype>text/markdown</mediatype>
+  </provides>
+  <releases>
+    <release version="0.1.0" date="2026-11-18"/>
+  </releases>
+</component>

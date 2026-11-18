@@ -554,7 +554,17 @@ impl Workspace {
                     .map_or_else(|| "Not saved yet".to_string(), |p| p.display().to_string());
                 let document = document.clone();
                 let focus = focus.clone();
+                let dragged = DraggedTab {
+                    index,
+                    label: label.clone().into(),
+                };
                 Tab::new()
+                    // Drag a tab onto another to move it there.
+                    .on_drag(dragged, |tab, _, _, cx| cx.new(|_| tab.clone()))
+                    .drag_over::<DraggedTab>(|style, _, _, cx| style.bg(cx.theme().drop_target))
+                    .on_drop(cx.listener(move |this, dragged: &DraggedTab, _, cx| {
+                        this.move_tab(dragged.index, index, cx)
+                    }))
                     // A right click selects the tab first: the menu then acts on it.
                     .on_mouse_down(
                         MouseButton::Right,
@@ -600,6 +610,50 @@ impl Workspace {
                 cx.listener(|this, index: &usize, window, cx| this.activate(*index, window, cx)),
             )
             .children(tabs)
+    }
+}
+
+/// A tab being dragged to a new place, drawn under the pointer as its label.
+#[derive(Clone)]
+struct DraggedTab {
+    index: usize,
+    label: SharedString,
+}
+
+impl Render for DraggedTab {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = cx.theme();
+        div()
+            .px_3()
+            .py_1()
+            .text_sm()
+            .rounded(theme.radius)
+            .border_1()
+            .border_color(theme.drag_border)
+            .bg(theme.tab_active)
+            .text_color(theme.tab_active_foreground)
+            .child(self.label.clone())
+    }
+}
+
+impl Workspace {
+    /// Move tab `from` to position `to`; the active tab stays active.
+    pub(super) fn move_tab(&mut self, from: usize, to: usize, cx: &mut Context<Self>) {
+        let count = self.documents.len();
+        if from == to || from >= count || to >= count {
+            return;
+        }
+        let active = self.documents[self.active].clone();
+        let document = self.documents.remove(from);
+        self.documents.insert(to, document);
+        let subscriptions = self.document_subscriptions.remove(from);
+        self.document_subscriptions.insert(to, subscriptions);
+        self.active = self
+            .documents
+            .iter()
+            .position(|d| *d == active)
+            .unwrap_or(0);
+        cx.notify();
     }
 }
 

@@ -111,6 +111,8 @@ fn main() {
             let options = WindowOptions {
                 window_bounds: Some(WindowBounds::centered(window_size, cx)),
                 focus: interactive,
+                // Matches the desktop entry, so the dock shows MD++'s icon and name.
+                app_id: Some(mdpp_core::paths::APP_ID.to_string()),
                 ..Default::default()
             };
             let opened = gpui_kit::open_window(options, cx, move |window, cx| {

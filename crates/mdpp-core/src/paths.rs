@@ -8,6 +8,9 @@ use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 
 /// Folder name under the platform's config/data roots.
 const APP_NAME: &str = "mdpp";
+/// The application id: Wayland app id / X11 class, desktop entry, icon and AppStream file names
+/// in `packaging/linux/` (a test keeps them in step), and the Flathub id.
+pub const APP_ID: &str = "io.github.mcftc.mdpp";
 /// A file with this name next to the executable turns on portable mode.
 pub const PORTABLE_MARKER: &str = "mdpp-portable";
 /// Portable mode keeps everything in this folder next to the executable.
@@ -65,6 +68,20 @@ impl Paths {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn packaging_files_use_the_app_id() {
+        let folder = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../packaging/linux");
+        for extension in ["desktop", "svg", "metainfo.xml"] {
+            assert!(
+                folder.join(format!("{APP_ID}.{extension}")).is_file(),
+                "{extension}"
+            );
+        }
+        let desktop = std::fs::read_to_string(folder.join(format!("{APP_ID}.desktop"))).unwrap();
+        assert!(desktop.contains(&format!("Icon={APP_ID}\n")));
+        assert!(desktop.contains(&format!("StartupWMClass={APP_ID}\n")));
+    }
 
     #[test]
     fn portable_only_with_the_marker() {
