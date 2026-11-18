@@ -171,6 +171,8 @@ mod tests {
             zoom: 2,
             wrap: Some(false),
             recent: vec![PathBuf::from("/n/a.md")],
+            folder: Some(PathBuf::from("/notes")),
+            folder_panel: true,
             documents: vec![
                 SessionDocument {
                     path: Some(PathBuf::from("/notes/a.md")),
