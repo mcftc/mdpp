@@ -1,0 +1,26 @@
+# Maintainer: MD++ contributors <https://github.com/mcftc/mdpp>
+# Binary package from the GitHub release archive. Update pkgver and sha256sums for each release
+# (`sha256sum` of the archive, also attached to the release as .sha256).
+pkgname=mdpp-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Fast Markdown editor with intellisense (MD++)"
+arch=('x86_64')
+url="https://github.com/mcftc/mdpp"
+license=('MIT OR Apache-2.0')
+depends=('glibc' 'gcc-libs' 'libxcb' 'libxkbcommon' 'libxkbcommon-x11' 'wayland' 'vulkan-icd-loader')
+optdepends=('vulkan-driver: GPU rendering (mesa, radeon, intel or nvidia Vulkan driver)')
+provides=('mdpp')
+conflicts=('mdpp')
+source=("$url/releases/download/v$pkgver/mdpp-$pkgver-x86_64-linux.tar.gz")
+sha256sums=('bf5f34d1334391c537f491243bc42e780c7388fc9e0f02291715be656601cb6b')
+
+package() {
+    cd "mdpp-$pkgver-x86_64-linux"
+    install -Dm755 mdpp "$pkgdir/usr/bin/mdpp"
+    install -Dm644 io.github.mcftc.mdpp.desktop "$pkgdir/usr/share/applications/io.github.mcftc.mdpp.desktop"
+    install -Dm644 io.github.mcftc.mdpp.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/io.github.mcftc.mdpp.svg"
+    install -Dm644 io.github.mcftc.mdpp.metainfo.xml "$pkgdir/usr/share/metainfo/io.github.mcftc.mdpp.metainfo.xml"
+    install -Dm644 LICENSE-MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
+    install -Dm644 LICENSE-APACHE "$pkgdir/usr/share/licenses/$pkgname/LICENSE-APACHE"
+}
