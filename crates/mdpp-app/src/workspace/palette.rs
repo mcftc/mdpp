@@ -19,15 +19,18 @@ impl Workspace {
                     .collect()
             })
             .unwrap_or_default();
-        // Open tabs first (the active one last: it is already in front), then recent files.
+        // Open tabs first (the active one last: it is already in front), then recent files, then
+        // the folder's files — each once (a set: a folder can hold thousands).
         let active = doc.path().map(std::path::Path::to_path_buf);
         let mut files: Vec<PathBuf> = Vec::new();
+        let mut seen: std::collections::HashSet<PathBuf> = active.iter().cloned().collect();
         let tabs = self
             .documents
             .iter()
             .filter_map(|d| d.read(cx).path().map(std::path::Path::to_path_buf));
-        for path in tabs.chain(self.recent.iter().cloned()) {
-            if !files.contains(&path) && Some(&path) != active.as_ref() {
+        let folder_files = self.folder.iter().flat_map(|f| f.files());
+        for path in tabs.chain(self.recent.iter().cloned()).chain(folder_files) {
+            if seen.insert(path.clone()) {
                 files.push(path);
             }
         }
@@ -39,6 +42,7 @@ impl Workspace {
         let sources = Sources {
             commands,
             files,
+            root: self.folder.as_ref().map(|f| f.root.clone()),
             headings,
             editor,
         };

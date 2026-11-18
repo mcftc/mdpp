@@ -2,7 +2,7 @@
 #
 # `action` is an action name as keymap.toml uses it; the shortcut shown beside an item is read
 # from the keymap, so it always matches. An item is one of:
-#   { label = "…", action = "namespace::Action" }   optional: check = "outline" | "preview" | "word_wrap" | "menu_bar"
+#   { label = "…", action = "namespace::Action" }   optional: check = "folder" | "outline" | "preview" | "word_wrap" | "menu_bar"
 #   { submenu = "…", items = [ … ] }
 #   { submenu = "…", list = "recent" }              items filled by MD++ (recent files)
 #   { separator = true }
@@ -12,6 +12,7 @@ name = "File"
 items = [
   { label = "New", action = "mdpp::NewFile" },
   { label = "Open…", action = "mdpp::OpenFile" },
+  { label = "Open Folder…", action = "mdpp::OpenFolder" },
   { submenu = "Open Recent", list = "recent" },
   { label = "Reopen Closed Tab", action = "mdpp::ReopenClosedTab" },
   { separator = true },
@@ -23,6 +24,7 @@ items = [
   { label = "Close Tab", action = "mdpp::CloseTab" },
   { label = "Close Other Tabs", action = "mdpp::CloseOtherTabs" },
   { label = "Close Saved Tabs", action = "mdpp::CloseSavedTabs" },
+  { label = "Close Folder", action = "mdpp::CloseFolder" },
   { separator = true },
   { label = "Settings", action = "mdpp::OpenSettings" },
   { label = "Settings File", action = "mdpp::OpenSettingsFile" },
@@ -78,6 +80,7 @@ name = "View"
 items = [
   { label = "Command Palette…", action = "mdpp::CommandPalette" },
   { separator = true },
+  { label = "Folder", action = "mdpp::ToggleFolderPanel", check = "folder" },
   { label = "Outline", action = "mdpp::ToggleOutline", check = "outline" },
   { label = "Preview", action = "mdpp::TogglePreview", check = "preview" },
   { label = "Word Wrap", action = "mdpp::ToggleWordWrap", check = "word_wrap" },

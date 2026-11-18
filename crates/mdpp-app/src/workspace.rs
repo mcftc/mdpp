@@ -5,6 +5,7 @@
 
 mod checks;
 mod editing;
+mod folder;
 mod palette;
 mod tabs;
 
@@ -92,6 +93,9 @@ actions!(
         CommandPalette,
         QuickOpen,
         GoToHeading,
+        OpenFolder,
+        CloseFolder,
+        ToggleFolderPanel,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -230,6 +234,9 @@ pub struct Workspace {
     goto_bar: Entity<GoToLineBar>,
     show_goto: bool,
     show_outline: bool,
+    /// The folder opened with `mdpp <folder>` or File → Open Folder, and whether its panel shows.
+    folder: Option<folder::FolderState>,
+    show_folder: bool,
     /// The palette, while it is open.
     palette: Option<(Entity<crate::palette::Palette>, Subscription)>,
     /// The settings window, while it is open.
@@ -312,6 +319,8 @@ impl Workspace {
             goto_bar,
             show_goto: false,
             show_outline: settings.outline_on_start,
+            folder: None,
+            show_folder: false,
             palette: None,
             settings_window: None,
             zoom: 0,
@@ -351,6 +360,13 @@ impl Workspace {
                 .unwrap_or(true)
         });
         this.refresh_watches(cx);
+        // Coming back to the window lists the opened folder again (files made elsewhere).
+        let activation = cx.observe_window_activation(window, |this, window, cx| {
+            if window.is_window_active() {
+                this.scan_folder(cx);
+            }
+        });
+        this._subscriptions.push(activation);
         this._watch = this.start_watching(changed, window, cx);
         this._forwarded = this.serve_instance(server, window, cx);
         this._autosave = this.start_autosave(cx);
@@ -369,6 +385,10 @@ impl Workspace {
         self.zoom = session.zoom;
         self.wrap = session.wrap;
         self.recent = session.recent.clone();
+        if let Some(root) = session.folder.clone().filter(|root| root.is_dir()) {
+            self.open_folder(root, cx);
+            self.show_folder = session.folder_panel;
+        }
         let mut messages = Vec::new();
         // Without hot exit nothing of the tabs is kept (unsaved changes were asked about).
         let documents = if self.settings.hot_exit {
@@ -418,6 +438,8 @@ impl Workspace {
             zoom: self.zoom,
             wrap: self.wrap,
             recent: self.recent.clone(),
+            folder: self.folder.as_ref().map(|f| f.root.clone()),
+            folder_panel: self.show_folder,
             documents: entries,
         };
         let unchanged =
@@ -831,6 +853,10 @@ impl Workspace {
         let mut errors = Vec::new();
         for request in requests {
             let path = request.path.clone();
+            if path.is_dir() {
+                self.open_folder(path, cx);
+                continue;
+            }
             // The CLI counts from 1, the editor from 0.
             let cursor = request
                 .line
@@ -1171,8 +1197,16 @@ impl Render for Workspace {
                 .text_size(px(self.font_size())),
         );
         let preview = doc.preview().clone();
-        let body = if self.show_preview || self.show_outline {
+        let folder = self.show_folder.then(|| self.render_folder(cx)).flatten();
+        let body = if self.show_preview || self.show_outline || folder.is_some() {
             let mut panels = h_resizable("workspace-panels");
+            if let Some(folder) = folder {
+                panels = panels.child(
+                    resizable_panel()
+                        .size(px(self.settings.outline_width))
+                        .child(folder),
+                );
+            }
             if self.show_outline {
                 let outline = self.render_outline(cx);
                 panels = panels.child(
@@ -1221,6 +1255,9 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::command_palette))
             .on_action(cx.listener(Self::quick_open))
             .on_action(cx.listener(Self::go_to_heading))
+            .on_action(cx.listener(Self::open_folder_dialog))
+            .on_action(cx.listener(Self::close_folder))
+            .on_action(cx.listener(Self::toggle_folder_panel))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
             .on_action(cx.listener(Self::close_other_tabs))

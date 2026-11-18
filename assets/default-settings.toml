@@ -32,6 +32,9 @@ auto_close_pairs = ["()", "[]", "{}", "``"]
 
 # How many recently opened files the menu remembers.
 recent_files_max = 10
+# An opened folder (mdpp <folder>, File → Open Folder) is listed up to this many files, skipping
+# what Git ignores and hidden files; the rest is left out of the panel, quick open and search.
+workspace_max_files = 5000
 
 # Size of a new window, in logical pixels.
 window_width = 1100

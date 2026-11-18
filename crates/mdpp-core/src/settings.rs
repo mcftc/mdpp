@@ -34,6 +34,7 @@ pub struct Settings {
     #[serde(rename = "file_watch_debounce_ms", deserialize_with = "millis")]
     pub file_watch_debounce: Duration,
     pub recent_files_max: usize,
+    pub workspace_max_files: usize,
     pub window_width: f32,
     pub window_height: f32,
     pub menu_bar: bool,

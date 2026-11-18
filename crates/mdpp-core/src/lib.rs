@@ -4,6 +4,7 @@
 pub mod cli;
 pub mod crash;
 pub mod file;
+pub mod folder;
 pub mod fuzzy;
 pub mod instance;
 pub mod keymap;

@@ -17,6 +17,7 @@ regex.workspace = true
 encoding_rs.workspace = true
 chardetng.workspace = true
 interprocess.workspace = true
+ignore.workspace = true
 
 [lints]
 workspace = true

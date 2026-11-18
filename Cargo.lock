@@ -3738,6 +3738,7 @@ dependencies = [
  "chardetng",
  "encoding_rs",
  "etcetera",
+ "ignore",
  "interprocess",
  "regex",
  "serde",

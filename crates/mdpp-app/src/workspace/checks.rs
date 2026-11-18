@@ -692,6 +692,64 @@ impl Workspace {
             "BENCH check external dirty_conflict={conflict:?} after_delete={deleted:?} dirty={dirty}"
         );
 
+        // A folder given like a file opens as the folder: listed (Git-ignored files left out),
+        // shown in the panel, and its files found by Ctrl+P.
+        let root = path.with_file_name("folder-check");
+        let _ = std::fs::remove_dir_all(&root);
+        for (file, text) in [
+            ("notes/zz-note.md", "# Z\n"),
+            ("a.md", "a\n"),
+            ("build/out.md", "x\n"),
+            (".gitignore", "build/\n"),
+        ] {
+            let file = root.join(file);
+            std::fs::create_dir_all(file.parent().unwrap_or(&root)).ok();
+            std::fs::write(file, text).ok();
+        }
+        this.update_in(cx, |this, window, cx| {
+            this.open_paths(vec![root.clone()], window, cx)
+        })
+        .ok();
+        cx.background_executor().timer(bench::SETTLE).await;
+        let listed = this
+            .update(cx, |this, _| {
+                let folder = this.folder.as_ref()?;
+                Some((folder.listing.files.len(), this.show_folder))
+            })
+            .ok()
+            .flatten();
+        let press = |keys: &'static str, cx: &mut AsyncWindowContext| {
+            cx.update(|window, cx| {
+                if let Ok(keystroke) = Keystroke::parse(keys) {
+                    window.dispatch_keystroke(keystroke, cx);
+                }
+            })
+            .ok();
+        };
+        for key in ["ctrl-p", "z", "z", "n", "enter"] {
+            press(key, cx);
+        }
+        cx.background_executor()
+            .timer(bench::KEYSTROKE_INTERVAL)
+            .await;
+        let opened = this
+            .update(cx, |this, cx| {
+                let doc = this.active_document().read(cx);
+                doc.path().is_some_and(|p| p.ends_with("notes/zz-note.md"))
+            })
+            .unwrap_or(false);
+        println!(
+            "BENCH check folder listed={} panel={} quick_open={opened}",
+            listed.is_some_and(|(files, _)| files == 2), // a.md, notes/zz-note.md
+            listed.is_some_and(|(_, panel)| panel)
+        );
+        this.update_in(cx, |this, window, cx| {
+            this.close_tab(&CloseTab, window, cx);
+            this.close_folder(&CloseFolder, window, cx);
+        })
+        .ok();
+        let _ = std::fs::remove_dir_all(&root);
+
         // The settings command creates the user's file from the template (only when it does not
         // exist yet; the check removes what it created) and opens it in a tab.
         let settings_file = this

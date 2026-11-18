@@ -6,7 +6,7 @@
 //! | `>`       | every menu command, with its shortcut (Ctrl+Shift+P opens here) |
 //! | `@`       | the headings of the document                                 |
 //! | `:`       | go to `line` or `line:column`                                |
-//! | otherwise | open tabs and recent files (Ctrl+P opens here)               |
+//! | otherwise | open tabs, recent files, the opened folder's files (Ctrl+P)  |
 //!
 //! The commands are the menus' (`assets/menus.toml`), so a new menu entry is in the palette by
 //! itself. Matching is fuzzy (`mdpp_core::fuzzy`). The palette only reports the choice; the
@@ -29,6 +29,9 @@ const LINE_PREFIX: char = ':';
 pub const WIDTH: f32 = 560.0;
 pub const TOP: f32 = 48.0;
 const MAX_HEIGHT: f32 = 380.0;
+/// Best matches shown; typing narrows the rest down. The list measures every row it is given,
+/// so a folder of thousands of files must not reach it whole.
+const MAX_ROWS: usize = 200;
 
 /// What the user picked.
 #[derive(Clone, Debug, PartialEq)]
@@ -59,6 +62,8 @@ struct Row {
 pub struct Sources {
     pub commands: Vec<(SharedString, SharedString, &'static str)>,
     pub files: Vec<PathBuf>,
+    /// The opened folder: its files are shown relative to it.
+    pub root: Option<PathBuf>,
     /// Text, level, byte offset.
     pub headings: Vec<(String, u8, usize)>,
     /// Shortcuts are looked up where the command will run: in the editor.
@@ -91,8 +96,13 @@ impl Palette {
 
     /// The rows for `query`, best match first.
     fn search(&mut self, query: &str, cx: &App) {
+        self.rows = self.rows_for(query, cx);
+        self.rows.truncate(MAX_ROWS);
+    }
+
+    fn rows_for(&self, query: &str, cx: &App) -> Vec<Row> {
         let sources = &self.sources;
-        self.rows = if let Some(text) = query.strip_prefix(COMMANDS_PREFIX) {
+        if let Some(text) = query.strip_prefix(COMMANDS_PREFIX) {
             // Label first, then "Edit › Format" too, so a menu name finds its commands.
             let names: Vec<String> = sources
                 .commands
@@ -169,7 +179,11 @@ impl Palette {
                         label: by_name[i].to_string().into(),
                         detail: path
                             .parent()
-                            .map(|p| p.display().to_string())
+                            .map(|p| {
+                                let inside =
+                                    sources.root.as_ref().and_then(|r| p.strip_prefix(r).ok());
+                                inside.unwrap_or(p).display().to_string()
+                            })
                             .unwrap_or_default()
                             .into(),
                         choice: Choice::Open(path.clone()),
@@ -177,7 +191,7 @@ impl Palette {
                     }
                 })
                 .collect()
-        };
+        }
     }
 
     fn placeholder(query: &str) -> &'static str {

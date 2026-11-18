@@ -34,6 +34,8 @@ regex = "1"
 encoding_rs = "0.8"
 chardetng = "1"
 interprocess = "2"
+# Lists an opened folder honouring .gitignore (already built: gpui-component's i18n macro uses it).
+ignore = "0.4"
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 smol = "2"
 # Fenced-code highlighting (PLAN D5): the parser and bat's ~200 syntaxes, pure-Rust regex — the

@@ -36,6 +36,11 @@ pub struct Session {
     /// Recently opened files, most recent first.
     #[serde(default)]
     pub recent: Vec<PathBuf>,
+    /// The opened folder, and whether its panel was showing.
+    #[serde(default)]
+    pub folder: Option<PathBuf>,
+    #[serde(default)]
+    pub folder_panel: bool,
     #[serde(default, rename = "document")]
     pub documents: Vec<SessionDocument>,
 }

@@ -13,11 +13,13 @@ use serde::Deserialize;
 const MENUS: &str = include_str!("../../../assets/menus.toml");
 
 /// `check` names the app knows; an item with one shows a check mark when it is on.
+pub const CHECK_FOLDER: &str = "folder";
 pub const CHECK_OUTLINE: &str = "outline";
 pub const CHECK_PREVIEW: &str = "preview";
 pub const CHECK_WORD_WRAP: &str = "word_wrap";
 pub const CHECK_MENU_BAR: &str = "menu_bar";
-const CHECKS: [&str; 4] = [
+const CHECKS: [&str; 5] = [
+    CHECK_FOLDER,
     CHECK_OUTLINE,
     CHECK_PREVIEW,
     CHECK_WORD_WRAP,

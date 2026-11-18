@@ -20,6 +20,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Outline sidebar, word count and reading time, HTML export
 - Live preview beside the text with scroll sync, open by default — the eye at the right of the tab
   row turns it on and off; find/replace with regex
+- Folders: `mdpp <folder>` or File → Open Folder — a folder panel (Git-ignored files left out),
+  its files in Ctrl+P
 - Reloads files changed by other programs; single instance (`mdpp file.md:line:col`)
 - Palette: Ctrl+Shift+P runs any command, Ctrl+P opens a file; in it `@` goes to a heading and
   `:` to a line (fuzzy matching)

@@ -394,6 +394,19 @@ impl Workspace {
             )
     }
 
+    /// Beside ≡: the folder panel on or off (with no folder open: choose one).
+    fn folder_toggle(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        Button::new("toggle-folder")
+            .icon(IconName::PanelLeft)
+            .ghost()
+            .small()
+            .tooltip("Folder")
+            .selected(self.show_folder && self.folder.is_some())
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.toggle_folder_panel(&ToggleFolderPanel, window, cx)
+            }))
+    }
+
     /// The eye at the right end of the tab row: the preview beside the text, on or off.
     fn preview_toggle(&self, cx: &mut Context<Self>) -> impl IntoElement {
         Button::new("toggle-preview")
@@ -468,6 +481,10 @@ impl Workspace {
     fn menu_state(&self, cx: &App) -> menus::MenuState {
         let wrap = self.active_document().read(cx).soft_wrap();
         let checked = [
+            (
+                menus::CHECK_FOLDER,
+                self.show_folder && self.folder.is_some(),
+            ),
             (menus::CHECK_OUTLINE, self.show_outline),
             (menus::CHECK_PREVIEW, self.show_preview),
             (menus::CHECK_WORD_WRAP, wrap),
@@ -561,7 +578,12 @@ impl Workspace {
             })
             .collect();
         TabBar::new("documents")
-            .prefix(div().px_1().child(self.menu_toggle(cx)))
+            .prefix(
+                h_flex()
+                    .px_1()
+                    .child(self.menu_toggle(cx))
+                    .child(self.folder_toggle(cx)),
+            )
             .suffix(div().px_1().child(self.preview_toggle(cx)))
             .selected_index(self.active)
             .on_click(
