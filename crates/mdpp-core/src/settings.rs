@@ -40,6 +40,7 @@ pub struct Settings {
     pub window_width: f32,
     pub window_height: f32,
     pub menu_bar: bool,
+    pub focus_mode_width: f32,
     pub outline_on_start: bool,
     pub outline_width: f32,
     pub reading_words_per_minute: u32,

@@ -18,7 +18,9 @@ pub const CHECK_OUTLINE: &str = "outline";
 pub const CHECK_PREVIEW: &str = "preview";
 pub const CHECK_WORD_WRAP: &str = "word_wrap";
 pub const CHECK_MENU_BAR: &str = "menu_bar";
-const CHECKS: [&str; 5] = [
+pub const CHECK_FOCUS_MODE: &str = "focus_mode";
+const CHECKS: [&str; 6] = [
+    CHECK_FOCUS_MODE,
     CHECK_FOLDER,
     CHECK_OUTLINE,
     CHECK_PREVIEW,

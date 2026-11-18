@@ -32,6 +32,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Reloads files changed by other programs; single instance (`mdpp file.md:line:col`)
 - Palette: Ctrl+Shift+P runs any command, Ctrl+P opens a file; in it `@` goes to a heading and
   `:` to a line (fuzzy matching)
+- Focus mode (F11): full screen, the text alone; portable mode: put a file named `mdpp-portable`
+  next to the program and everything stays in `mdpp-data/` beside it
 - Settings window (Ctrl+,) like Zed's: search, categories, a described control per setting —
   it writes your `settings.toml`; settings and key bindings are TOML files, applied live
 

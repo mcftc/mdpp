@@ -486,6 +486,23 @@ impl Workspace {
             })
             .unwrap_or_default();
         println!("BENCH check menus {menus} menu_bar {toggled}");
+        // Focus mode draws the text alone (without going full screen on the tester's desktop).
+        this.update(cx, |this, cx| {
+            this.focus_mode = true;
+            cx.notify();
+        })
+        .ok();
+        cx.background_executor()
+            .timer(bench::KEYSTROKE_INTERVAL)
+            .await;
+        let drawn = this
+            .update(cx, |this, cx| {
+                this.focus_mode = false;
+                cx.notify();
+                true
+            })
+            .unwrap_or(false);
+        println!("BENCH check focus_mode drawn={drawn}");
         let path = document.read_with(cx, |doc, _| doc.path().map(PathBuf::from));
         let before = path.as_ref().and_then(|p| std::fs::read(p).ok());
         editor

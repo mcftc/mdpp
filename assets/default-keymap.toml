@@ -231,3 +231,7 @@ action = "mdpp::RenameHeading"
 [[binding]]
 keys = "shift-f12"
 action = "mdpp::FindReferences"
+
+[[binding]]
+keys = "f11"
+action = "mdpp::ToggleFocusMode"

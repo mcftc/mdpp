@@ -101,6 +101,7 @@ actions!(
         FormatTable,
         RenameHeading,
         FindReferences,
+        ToggleFocusMode,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -245,6 +246,8 @@ pub struct Workspace {
     show_find: bool,
     prompt_bar: Entity<PromptBar>,
     show_prompt: bool,
+    /// Focus mode (F11): full screen, the text alone.
+    focus_mode: bool,
     show_outline: bool,
     /// The folder opened with `mdpp <folder>` or File → Open Folder, and whether its panel shows.
     folder: Option<folder::FolderState>,
@@ -354,6 +357,7 @@ impl Workspace {
             show_find: false,
             prompt_bar,
             show_prompt: false,
+            focus_mode: false,
             show_outline: settings.outline_on_start,
             folder: None,
             show_side: false,
@@ -1113,6 +1117,18 @@ impl Workspace {
         self.activate((self.active + count - 1) % count, window, cx);
     }
 
+    /// F11: full screen with the text alone, centred; again, everything comes back.
+    fn toggle_focus_mode(
+        &mut self,
+        _: &ToggleFocusMode,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.focus_mode = !self.focus_mode;
+        window.toggle_fullscreen();
+        cx.notify();
+    }
+
     fn toggle_preview(&mut self, _: &TogglePreview, _window: &mut Window, cx: &mut Context<Self>) {
         self.show_preview = !self.show_preview;
         let visible = self.show_preview;
@@ -1238,8 +1254,22 @@ impl Render for Workspace {
                 .text_size(px(self.font_size())),
         );
         let preview = doc.preview().clone();
-        let folder = self.render_side(cx);
-        let body = if self.show_preview || self.show_outline || folder.is_some() {
+        // Focus mode: the text alone, in a column, full screen.
+        let focus = self.focus_mode;
+        let folder = (!focus).then(|| self.render_side(cx)).flatten();
+        let body = if focus {
+            h_flex()
+                .size_full()
+                .justify_center()
+                .child(
+                    div()
+                        .h_full()
+                        .w_full()
+                        .max_w(px(self.settings.focus_mode_width))
+                        .child(editor),
+                )
+                .into_any_element()
+        } else if self.show_preview || self.show_outline || folder.is_some() {
             let mut panels = h_resizable("workspace-panels");
             if let Some(folder) = folder {
                 panels = panels.child(
@@ -1303,6 +1333,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::format_table))
             .on_action(cx.listener(Self::rename_heading))
             .on_action(cx.listener(Self::insert_snippet))
+            .on_action(cx.listener(Self::toggle_focus_mode))
             .on_action(cx.listener(Self::find_references))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
@@ -1346,17 +1377,17 @@ impl Render for Workspace {
                 this.open_paths(others, window, cx)
             }))
             .bg(cx.theme().background)
-            .when(self.settings.menu_bar, |root| {
+            .when(self.settings.menu_bar && !focus, |root| {
                 root.child(self.render_menu_bar(cx))
             })
-            .child(self.render_tabs(cx))
+            .when(!focus, |root| root.child(self.render_tabs(cx)))
             .when_some(conflict, |root, conflict| {
                 root.child(self.render_conflict(conflict, cx))
             })
             .when(self.show_find, |root| root.child(self.find_bar.clone()))
             .when(self.show_prompt, |root| root.child(self.prompt_bar.clone()))
             .child(div().flex_1().min_h_0().child(body))
-            .child(self.render_status(cx))
+            .when(!focus, |root| root.child(self.render_status(cx)))
             // Painted after the editor: marks "the frame is on its way" for the measurements.
             .children(self.render_palette(cx))
             .child(canvas(|_, _, _| {}, move |_, _, _, _| probe.borrow_mut().painted()).size_0())

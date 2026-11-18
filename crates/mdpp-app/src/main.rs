@@ -59,7 +59,7 @@ fn main() {
     };
 
     // Settings and keymap: shipped defaults overlaid with the user's files, if any.
-    let paths = Paths::platform();
+    let paths = Paths::find();
     // Session, backups and crash reports live in the data folder (overridable for tests).
     let data_dir = match std::env::var_os("MDPP_DATA_DIR") {
         Some(dir) => Some(PathBuf::from(dir)),

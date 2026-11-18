@@ -486,6 +486,7 @@ impl Workspace {
             (menus::CHECK_PREVIEW, self.show_preview),
             (menus::CHECK_WORD_WRAP, wrap),
             (menus::CHECK_MENU_BAR, self.settings.menu_bar),
+            (menus::CHECK_FOCUS_MODE, self.focus_mode),
         ]
         .into_iter()
         .filter_map(|(name, on)| on.then_some(name))
