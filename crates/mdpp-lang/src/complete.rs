@@ -9,7 +9,7 @@ use mdpp_markdown::{BlockState, DocIndex};
 use ropey::{LineType, Rope};
 
 use crate::data::{ALERTS, FENCE_LANGUAGES, IMAGE_EXTENSIONS};
-use crate::paths::{PathSource, percent_decode, percent_encode_path};
+use crate::paths::{PathSource, headings_of, percent_decode, percent_encode_path};
 
 /// Only this much of the line before the cursor is inspected.
 const MAX_CONTEXT_BYTES: usize = 1_024;
@@ -44,6 +44,8 @@ pub struct Completion {
 pub enum ContextKind {
     /// `](#…` — a heading of this document.
     Anchor,
+    /// `](other.md#…` — a heading of another file (`file` as typed, relative to the document).
+    FileAnchor { file: String },
     /// `](…` or `![](…` — a file or folder; `dir` is what was typed up to the last `/`.
     Path { dir: String, images: bool },
     /// `[text][…`
@@ -132,8 +134,13 @@ fn context_in_line(before: &str, base: usize) -> Option<Context> {
         if !target.contains([')', ' ', '\t', '<', '>', '"']) {
             let target_start = p + 2;
             if let Some(hash) = target.find('#') {
-                // Anchors in other files need the workspace index (v1.0, PLAN §4.3).
-                return (hash == 0).then(|| ctx(ContextKind::Anchor, target_start + 1))?;
+                let kind = match hash {
+                    0 => ContextKind::Anchor,
+                    _ => ContextKind::FileAnchor {
+                        file: target[..hash].to_string(),
+                    },
+                };
+                return ctx(kind, target_start + hash + 1);
             }
             let name_start = target.rfind('/').map_or(0, |s| s + 1);
             let images = before[..p]
@@ -233,6 +240,21 @@ pub fn candidates(
                     .collect()
             })
             .unwrap_or_default(),
+        ContextKind::FileAnchor { file } => doc_dir
+            .and_then(|dir| headings_of(files, &dir.join(percent_decode(file))))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|h| h.anchor.contains(&prefix))
+            .map(|h| {
+                let detail = format!("{} {}", "#".repeat(usize::from(h.level)), h.text);
+                item(
+                    h.anchor.clone(),
+                    h.anchor,
+                    CompletionKind::Heading,
+                    Some(detail),
+                )
+            })
+            .collect(),
         ContextKind::Path { dir, images } => {
             let Some(doc_dir) = doc_dir else {
                 return Vec::new();
@@ -401,7 +423,6 @@ mod tests {
         assert_eq!(kind("note:s|"), None);
         assert_eq!(kind(":s|"), None); // too short
         assert_eq!(kind("```rust {x}|"), None);
-        assert_eq!(kind("[x](other.md#a|"), None); // cross-file anchors: v1.0
         let text = Rope::from_str("[x](#a");
         assert_eq!(context_at(&text, 6, BlockState::HtmlComment), None);
     }
@@ -430,6 +451,33 @@ mod tests {
         let labels: Vec<_> = items.iter().map(|c| c.label.as_str()).collect();
         assert_eq!(labels, vec!["install-guide", "install-guide-1"]);
         assert_eq!(items[0].detail.as_deref(), Some("# Install guide"));
+    }
+
+    #[test]
+    fn anchors_of_another_file() {
+        assert_eq!(
+            kind("[x](docs/other%20one.md#a|"),
+            Some(ContextKind::FileAnchor {
+                file: "docs/other%20one.md".into()
+            })
+        );
+        let fs = FakeFs::with(&["/d/docs/other one.md", "/d/a.txt"])
+            .text(
+                "/d/docs/other one.md",
+                "# Setup\r\n## Set up again\n# Use\n",
+            )
+            .text("/d/a.txt", "# Not markdown\n");
+        let dir = Some(Path::new("/d"));
+        let ctx = context("[x](docs/other%20one.md#set|").unwrap();
+        let items = candidates(&ctx, None, &fs, dir);
+        let labels: Vec<_> = items.iter().map(|c| c.label.as_str()).collect();
+        assert_eq!(labels, ["setup", "set-up-again"]);
+        assert_eq!(items[1].detail.as_deref(), Some("## Set up again"));
+        assert_eq!(items[0].replace, 24..27); // just "set"
+        // Not Markdown, unreadable or unsaved document: nothing.
+        assert!(candidates(&context("[x](a.txt#|").unwrap(), None, &fs, dir).is_empty());
+        assert!(candidates(&context("[x](none.md#|").unwrap(), None, &fs, dir).is_empty());
+        assert!(candidates(&ctx, None, &fs, None).is_empty());
     }
 
     #[test]

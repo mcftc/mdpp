@@ -18,4 +18,7 @@ mod paths;
 
 pub use complete::{Completion, CompletionKind, Context, ContextKind, candidates, context_at};
 pub use diagnostics::{Diagnostic, RULES, diagnose};
-pub use paths::{DirEntry, FileSystem, PathSource, file_uri, path_from_file_uri, percent_decode};
+pub use paths::{
+    DirEntry, FileSystem, OtherHeading, PathSource, file_uri, headings_of, is_markdown,
+    path_from_file_uri, percent_decode,
+};

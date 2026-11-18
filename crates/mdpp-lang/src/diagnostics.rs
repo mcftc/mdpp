@@ -10,7 +10,7 @@ use std::path::Path;
 
 use mdpp_markdown::{DocIndex, LinkKind, normalize_label};
 
-use crate::paths::{PathSource, is_relative_path, percent_decode};
+use crate::paths::{OtherHeading, PathSource, headings_of, is_relative_path, percent_decode};
 
 /// Rule ids: the stable names users configure.
 pub const MISSING_ANCHOR: &str = "missing-anchor";
@@ -45,6 +45,11 @@ pub fn diagnose(
     files: &dyn PathSource,
 ) -> Vec<Diagnostic> {
     let mut out = Vec::new();
+    // Each linked Markdown file is read once per run, however many links point into it.
+    let mut other_headings: std::collections::HashMap<
+        std::path::PathBuf,
+        Option<Vec<OtherHeading>>,
+    > = std::collections::HashMap::new();
     let mut report = |code: &'static str, range: Range<usize>, message: String| {
         out.push(Diagnostic {
             range,
@@ -74,12 +79,32 @@ pub fn diagnose(
             && is_relative_path(dest)
         {
             let path = percent_decode(dest.split(['#', '?']).next().unwrap_or_default());
-            if !path.is_empty() && !files.exists(&dir.join(&path)) {
+            if path.is_empty() {
+                continue;
+            }
+            let full = dir.join(&path);
+            if !files.exists(&full) {
                 report(
                     MISSING_FILE,
                     link.range.clone(),
                     format!("File `{path}` not found."),
                 );
+            } else if let Some((_, anchor)) = dest.split_once('#')
+                && !anchor.is_empty()
+            {
+                let anchor = percent_decode(anchor);
+                let headings = other_headings
+                    .entry(full.clone())
+                    .or_insert_with(|| headings_of(files, &full));
+                if let Some(headings) = headings
+                    && !headings.iter().any(|h| h.anchor == anchor)
+                {
+                    report(
+                        MISSING_ANCHOR,
+                        link.range.clone(),
+                        format!("No heading with the anchor `#{anchor}` in `{path}`."),
+                    );
+                }
             }
         }
     }
@@ -156,6 +181,29 @@ mod tests {
                 ("undefined-reference", "[broken][zz]".to_string()),
                 ("unused-definition", "[spare]: https://e.com".to_string()),
                 ("duplicate-footnote", "[^n]: Two.\n".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn anchors_in_other_files() {
+        let doc = "[a](guide.md#setup) [b](guide.md#nope) [c](guide.md#nope) [d](img.png#x)";
+        let index = DocIndex::build(doc);
+        let fs = FakeFs::with(&["/d/guide.md", "/d/img.png"]).text("/d/guide.md", "# Setup\n");
+        let found: Vec<_> = diagnose(&index, Some(Path::new("/d")), &fs)
+            .into_iter()
+            .map(|d| (d.code, doc[d.range].to_string(), d.message))
+            .collect();
+        let message = "No heading with the anchor `#nope` in `guide.md`.".to_string();
+        assert_eq!(
+            found,
+            vec![
+                (
+                    "missing-anchor",
+                    "[b](guide.md#nope)".to_string(),
+                    message.clone()
+                ),
+                ("missing-anchor", "[c](guide.md#nope)".to_string(), message),
             ]
         );
     }

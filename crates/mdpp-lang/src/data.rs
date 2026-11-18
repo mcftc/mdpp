@@ -18,6 +18,10 @@ pub static FENCE_LANGUAGES: LazyLock<Vec<&'static str>> =
 pub static ALERTS: LazyLock<Vec<&'static str>> =
     LazyLock::new(|| lines(include_str!("../data/alerts.txt")));
 
+/// File extensions of Markdown files (lower case): links into them can name a heading.
+pub static MARKDOWN_EXTENSIONS: LazyLock<Vec<&'static str>> =
+    LazyLock::new(|| lines(include_str!("../data/markdown-extensions.txt")));
+
 /// File extensions offered inside image links (`![](…)`), lower case.
 pub static IMAGE_EXTENSIONS: LazyLock<Vec<&'static str>> =
     LazyLock::new(|| lines(include_str!("../data/image-extensions.txt")));

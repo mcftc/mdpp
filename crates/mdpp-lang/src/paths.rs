@@ -3,6 +3,10 @@
 
 use std::path::Path;
 
+use mdpp_markdown::DocIndex;
+
+use crate::data::MARKDOWN_EXTENSIONS;
+
 /// Directory listings larger than this are truncated: path completion must stay instant even in
 /// folders with huge numbers of files.
 pub const MAX_DIR_ENTRIES: usize = 2_000;
@@ -13,10 +17,46 @@ pub struct DirEntry {
     pub is_dir: bool,
 }
 
+/// A heading of another Markdown file, for links like `other.md#anchor`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OtherHeading {
+    pub anchor: String,
+    pub level: u8,
+    pub text: String,
+}
+
 pub trait PathSource {
     /// Entries of `dir`, non-recursive; empty if it cannot be read.
     fn list(&self, dir: &Path) -> Vec<DirEntry>;
     fn exists(&self, path: &Path) -> bool;
+    /// The text of a file, `None` if it cannot be read as text.
+    fn read(&self, path: &Path) -> Option<String>;
+}
+
+/// Whether links into `path` can name a heading (a Markdown file by its extension).
+pub fn is_markdown(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| MARKDOWN_EXTENSIONS.contains(&e.to_lowercase().as_str()))
+}
+
+/// The headings of Markdown file `path`, `None` when it is not Markdown or cannot be read.
+pub fn headings_of(files: &dyn PathSource, path: &Path) -> Option<Vec<OtherHeading>> {
+    if !is_markdown(path) {
+        return None;
+    }
+    let index = DocIndex::build(&files.read(path)?);
+    Some(
+        index
+            .headings
+            .into_iter()
+            .map(|h| OtherHeading {
+                anchor: h.anchor,
+                level: h.level,
+                text: h.text,
+            })
+            .collect(),
+    )
 }
 
 /// The real file system.
@@ -40,6 +80,17 @@ impl PathSource for FileSystem {
 
     fn exists(&self, path: &Path) -> bool {
         path.exists()
+    }
+
+    /// Markdown is UTF-8 nearly always; other bytes become U+FFFD (headings stay findable).
+    fn read(&self, path: &Path) -> Option<String> {
+        let bytes = std::fs::read(path).ok()?;
+        let text = String::from_utf8_lossy(&bytes);
+        Some(
+            text.strip_prefix('\u{feff}')
+                .unwrap_or(&text)
+                .replace("\r\n", "\n"),
+        )
     }
 }
 
@@ -151,9 +202,9 @@ pub(crate) mod fake {
     use std::collections::BTreeMap;
     use std::path::PathBuf;
 
-    /// In-memory tree: path → is_dir.
+    /// In-memory tree: path → is_dir; files' text where a test needs it.
     #[derive(Default)]
-    pub struct FakeFs(pub BTreeMap<PathBuf, bool>);
+    pub struct FakeFs(pub BTreeMap<PathBuf, bool>, pub BTreeMap<PathBuf, String>);
 
     impl FakeFs {
         pub fn with(paths: &[&str]) -> Self {
@@ -168,7 +219,13 @@ pub(crate) mod fake {
                 }
                 map.insert(path, is_dir);
             }
-            FakeFs(map)
+            FakeFs(map, BTreeMap::new())
+        }
+
+        /// Also give `path` this text.
+        pub fn text(mut self, path: &str, text: &str) -> Self {
+            self.1.insert(PathBuf::from(path), text.to_string());
+            self
         }
     }
 
@@ -186,6 +243,10 @@ pub(crate) mod fake {
 
         fn exists(&self, path: &Path) -> bool {
             self.0.contains_key(path)
+        }
+
+        fn read(&self, path: &Path) -> Option<String> {
+            self.1.get(path).cloned()
         }
     }
 }

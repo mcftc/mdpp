@@ -12,7 +12,7 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Hot exit: quit any time; tabs and unsaved text come back next start (off: asks before closing)
 - A menu bar above the tabs (File · Edit · Selection · View · Go · Help) with every command and
   its shortcut — ≡ hides or shows it; go to line, zoom, word wrap, line commands
-- Markdown highlighting with coloured code blocks (~200 languages, theme colours), completions (anchors, paths, references, emoji, fences, alerts), diagnostics
+- Markdown highlighting with coloured code blocks (~200 languages, theme colours), completions (anchors — also of other files, `](other.md#` —, paths, references, emoji, fences, alerts), diagnostics
   (missing headings and files, undefined or unused references, duplicate footnotes; each one's
   severity is a setting), go to definition and hover for links and footnotes
 - List continuation and Tab/Shift+Tab nesting, formatting toggles, heading levels, links (paste a
