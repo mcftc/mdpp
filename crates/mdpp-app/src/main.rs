@@ -6,6 +6,7 @@
 //! names the single-instance socket (separate test instances from a real one).
 
 mod bench;
+mod code_actions;
 mod completion;
 mod document;
 mod find;

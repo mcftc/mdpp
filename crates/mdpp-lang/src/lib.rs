@@ -8,6 +8,7 @@
 //! current line synchronously (always up to date, PLAN §3.2), and [`candidates`] fills the list,
 //! using a `DocIndex` only when [`Context::needs_index`] says so.
 
+pub mod actions;
 pub mod assist;
 mod complete;
 mod data;

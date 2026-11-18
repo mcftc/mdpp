@@ -225,7 +225,14 @@ impl Workspace {
         );
 
         // Each step: set the text and caret, press keys, compare the text.
-        let steps: [(&str, usize, &[&str], &str); 8] = [
+        let steps: [(&str, usize, &[&str], &str); 9] = [
+            // Ctrl+. offers code actions; the first one away from links: a table of contents.
+            (
+                "## A\n## B",
+                0,
+                &["ctrl-.", "enter"],
+                "<!-- toc -->\n- [A](#a)\n- [B](#b)\n<!-- /toc -->\n\n## A\n## B",
+            ),
             // F2 renames the heading (the bar starts with its text selected) and its links.
             (
                 "# Old\n\n[x](#old)",

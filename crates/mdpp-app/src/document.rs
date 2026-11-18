@@ -257,6 +257,9 @@ impl Document {
                 index.clone(),
                 shared_path.clone(),
             )));
+            state.lsp_mut().code_action_providers.push(Rc::new(
+                crate::code_actions::MdCodeActions::new(shared_path.clone()),
+            ));
             let navigation = Rc::new(MdNavigation::new(shared_path.clone()));
             state.lsp_mut().definition_provider = Some(navigation.clone());
             state.lsp_mut().hover_provider = Some(navigation);
