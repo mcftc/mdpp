@@ -145,6 +145,8 @@
 "Don't Save" = "Kaydetme"
 "Cancel" = "Vazgeç"
 "Keep mine" = "Benimkileri tut"
+"Open the disk version" = "Diskteki sürümü aç"
+"{name} changed on disk while MD++ was closed; your unsaved version is shown." = "{name}, MD++ kapalıyken diskte değişti; kaydedilmemiş sürümün gösteriliyor."
 "OK" = "Tamam"
 "Settings reloaded" = "Ayarlar yeniden yüklendi"
 "Save the document first: images are stored next to it." = "Önce belgeyi kaydet: resimler onun yanında saklanır."

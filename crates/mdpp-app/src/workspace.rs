@@ -677,6 +677,13 @@ impl Workspace {
                 ),
                 true,
             ),
+            DiskConflict::ChangedWhileClosed => (
+                tf(
+                    "{name} changed on disk while MD++ was closed; your unsaved version is shown.",
+                    &[("name", &name)],
+                ),
+                true,
+            ),
             DiskConflict::Deleted => (
                 tf(
                     "{name} was deleted on disk. Its text stays here — save to write it again.",
@@ -705,6 +712,16 @@ impl Workspace {
                         })),
                 )
             })
+            .when(conflict == DiskConflict::ChangedWhileClosed, |bar| {
+                bar.child(
+                    Button::new("open-disk-version")
+                        .label(t("Open the disk version"))
+                        .small()
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.open_disk_version(window, cx)),
+                        ),
+                )
+            })
             .child(
                 Button::new("keep-mine")
                     .label(t(if reload { "Keep mine" } else { "OK" }))
@@ -714,6 +731,33 @@ impl Workspace {
                             .update(cx, |doc, cx| doc.keep_mine(cx));
                     })),
             )
+    }
+
+    /// The active file as it is on disk, in a new untitled tab beside the unsaved version, to
+    /// compare or copy from.
+    fn open_disk_version(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(path) = self
+            .active_document()
+            .read(cx)
+            .path()
+            .map(std::path::Path::to_path_buf)
+        else {
+            return;
+        };
+        match OpenedDoc::load(&path) {
+            Ok(disk) => {
+                let copy = OpenedDoc {
+                    path: None,
+                    saved: None,
+                    backup: None,
+                    cursor: None,
+                    conflict: None,
+                    ..disk
+                };
+                self.add_document(copy, window, cx);
+            }
+            Err(error) => window.push_notification(Notification::error(format!("{error:#}")), cx),
+        }
     }
 
     fn reopen_with_encoding(

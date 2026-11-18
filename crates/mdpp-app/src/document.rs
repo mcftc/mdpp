@@ -46,6 +46,8 @@ pub struct OpenedDoc {
     pub backup: Option<String>,
     /// Cursor to restore (line, column).
     pub cursor: Option<(u32, u32)>,
+    /// A conflict to show at once (the file changed while MD++ was closed).
+    pub conflict: Option<DiskConflict>,
 }
 
 impl OpenedDoc {
@@ -71,6 +73,7 @@ impl OpenedDoc {
             saved: None,
             backup: None,
             cursor: None,
+            conflict: None,
         })
     }
 
@@ -86,11 +89,13 @@ impl OpenedDoc {
             saved: None,
             backup: None,
             cursor: None,
+            conflict: None,
         }
     }
 
     /// Rebuild a document from its session entry: unsaved text from the backup when there is one,
-    /// else the file. Returns a warning when the file changed on disk while MD++ was closed.
+    /// else the file. A file changed on disk while MD++ was closed comes back with the conflict
+    /// bar (keep mine, reload, or open the disk version beside it).
     pub fn restore(
         entry: &SessionDocument,
         store: &Store,
@@ -123,12 +128,6 @@ impl OpenedDoc {
             .path
             .as_deref()
             .is_some_and(|p| FileStamp::of(p) != entry.disk);
-        let warning = changed.then(|| {
-            format!(
-                "{} changed on disk while MD++ was closed. Your unsaved version was restored: save to keep it, or close without saving to use the version on disk.",
-                file_label(entry.path.as_deref())
-            )
-        });
         let doc = Self {
             path: entry.path.clone(),
             text,
@@ -140,16 +139,10 @@ impl OpenedDoc {
             saved: Some(saved),
             backup: entry.backup.clone(),
             cursor,
+            conflict: changed.then_some(DiskConflict::ChangedWhileClosed),
         };
-        Ok((doc, warning))
+        Ok((doc, None))
     }
-}
-
-fn file_label(path: Option<&Path>) -> String {
-    path.and_then(Path::file_name).map_or_else(
-        || "Untitled".to_string(),
-        |n| n.to_string_lossy().into_owned(),
-    )
 }
 
 /// Disk work the session store has to do for one document.
@@ -172,6 +165,8 @@ pub struct Renamed(pub PathBuf);
 pub enum DiskConflict {
     /// Changed on disk while this tab has unsaved changes.
     Changed,
+    /// Changed on disk while MD++ was closed; the restored tab shows the unsaved version.
+    ChangedWhileClosed,
     /// Deleted (or moved away) on disk; the tab keeps its text.
     Deleted,
 }
@@ -309,7 +304,7 @@ impl Document {
             dirty,
             soft_wrap,
             disk_stamp,
-            conflict: None,
+            conflict: doc.conflict,
             backup: doc.backup,
             backed_up_revision: None,
             settings,
@@ -864,7 +859,46 @@ impl Document {
 
 #[cfg(test)]
 mod tests {
+    use mdpp_core::session::{FileStamp, SessionDocument, Store};
     use mdpp_core::settings::Settings;
+    use mdpp_core::text::Eol;
+
+    use super::{DiskConflict, OpenedDoc};
+
+    #[test]
+    fn a_file_changed_while_closed_comes_back_with_the_conflict_bar() {
+        let dir = std::env::temp_dir().join(format!("mdpp-restore-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("notes.md");
+        std::fs::write(&file, "on disk at quit\n").unwrap();
+        let at_quit = FileStamp::of(&file);
+        let store = Store::new(dir.join("data"));
+        store.write_backup("b1", "my unsaved text\n").unwrap();
+        let entry = SessionDocument {
+            path: Some(file.clone()),
+            backup: Some("b1".into()),
+            cursor_line: 0,
+            cursor_column: 0,
+            eol: Eol::Lf,
+            bom: false,
+            encoding: "UTF-8".into(),
+            disk: at_quit,
+        };
+        // Unchanged on disk: the unsaved text, no bar.
+        let (doc, _) = OpenedDoc::restore(&entry, &store).unwrap();
+        assert_eq!(
+            (doc.text.as_str(), doc.conflict),
+            ("my unsaved text\n", None)
+        );
+        // Changed while MD++ was closed: still the unsaved text, now with the bar.
+        std::fs::write(&file, "edited elsewhere, a different length\n").unwrap();
+        let (doc, warning) = OpenedDoc::restore(&entry, &store).unwrap();
+        assert_eq!(doc.text, "my unsaved text\n");
+        assert_eq!(doc.conflict, Some(DiskConflict::ChangedWhileClosed));
+        assert_eq!(warning, None, "the bar says it; no extra notification");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn every_diagnostic_rule_has_a_default_level() {
