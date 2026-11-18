@@ -38,6 +38,12 @@ interprocess = "2"
 ignore = "0.4"
 # Column widths of aligned tables (East Asian wide characters); already built for the UI.
 unicode-width = "0.2"
+# Display math in the preview (PLAN §4.2): LaTeX laid out in pure Rust (KaTeX-compatible) and
+# drawn as SVG with the KaTeX fonts embedded — no JavaScript, no system fonts needed.
+ratex-parser = "0.1.16"
+ratex-layout = "0.1.16"
+ratex-types = "0.1.16"
+ratex-svg = { version = "0.1.16", features = ["embed-fonts"] }
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 smol = "2"
 # Fenced-code highlighting (PLAN D5): the parser and bat's ~200 syntaxes, pure-Rust regex — the

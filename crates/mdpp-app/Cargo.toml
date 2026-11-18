@@ -13,6 +13,10 @@ name = "mdpp"
 path = "src/main.rs"
 
 [dependencies]
+ratex-parser.workspace = true
+ratex-layout.workspace = true
+ratex-types.workspace = true
+ratex-svg.workspace = true
 mdpp-core.workspace = true
 mdpp-markdown.workspace = true
 mdpp-lang.workspace = true

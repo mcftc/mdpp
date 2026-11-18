@@ -11,6 +11,7 @@ mod completion;
 mod document;
 mod find;
 mod highlight;
+mod math;
 mod menus;
 mod navigation;
 mod palette;

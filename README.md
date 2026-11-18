@@ -25,6 +25,7 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - F2 renames a heading and the links to it; Shift+F12 finds links to a heading
 - Paste or drop images: stored next to the document (`assets/<name>/`) and linked
 - Outline sidebar, word count and reading time, HTML export
+- Display math (`$$…$$`) drawn in the preview
 - Live preview beside the text with scroll sync, open by default — the eye at the right of the tab
   row turns it on and off; find/replace with regex
 - Folders: `mdpp <folder>` or File → Open Folder — a folder panel (Git-ignored files left out),

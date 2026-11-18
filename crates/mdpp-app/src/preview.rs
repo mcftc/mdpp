@@ -20,6 +20,8 @@ use crate::highlight::SharedCodeColors;
 
 /// Pixels rendered beyond the viewport so fast scrolling does not show blank space.
 const OVERDRAW: f32 = 600.0;
+/// Display formulas are drawn this much larger than the preview text (as KaTeX does).
+const MATH_SCALE: f32 = 1.21;
 /// Heading size relative to body text, H1…H6 (GitHub-like proportions).
 const HEADING_SCALE: [f32; 6] = [1.9, 1.5, 1.25, 1.1, 1.0, 0.9];
 /// Code, HTML and footnotes are set slightly smaller than body text.
@@ -33,6 +35,8 @@ pub struct Preview {
     remote_images: bool,
     /// The document's code colours (the editor's, found by content here too).
     code_colors: SharedCodeColors,
+    /// Display formulas, laid out once.
+    math: crate::math::MathCache,
 }
 
 impl Preview {
@@ -44,6 +48,7 @@ impl Preview {
             max_width: px(max_width),
             remote_images,
             code_colors,
+            math: crate::math::MathCache::default(),
         }
     }
 
@@ -95,7 +100,13 @@ impl Preview {
             return div().into_any_element();
         };
         let code = self.code_colors.borrow().clone();
-        let style = Palette::new(cx, self.doc_dir.as_deref(), self.remote_images, code);
+        let style = Palette::new(
+            cx,
+            self.doc_dir.as_deref(),
+            self.remote_images,
+            code,
+            &self.math,
+        );
         div()
             .w_full()
             .flex()
@@ -145,6 +156,9 @@ struct Palette<'a> {
     remote_images: bool,
     code: Arc<CodeColors>,
     syntax: Arc<HighlightTheme>,
+    foreground: Hsla,
+    danger: Hsla,
+    math: &'a crate::math::MathCache,
 }
 
 impl<'a> Palette<'a> {
@@ -153,6 +167,7 @@ impl<'a> Palette<'a> {
         doc_dir: Option<&'a Path>,
         remote_images: bool,
         code: Arc<CodeColors>,
+        math: &'a crate::math::MathCache,
     ) -> Self {
         let theme = cx.theme();
         Self {
@@ -173,6 +188,9 @@ impl<'a> Palette<'a> {
             remote_images,
             code,
             syntax: theme.highlight_theme.clone(),
+            foreground: theme.foreground,
+            danger: theme.danger,
+            math,
         }
     }
 
@@ -394,11 +412,28 @@ fn render_inlines(content: &Inlines, p: &Palette) -> AnyElement {
                 .into_any_element()
         }
         Segment::Image { dest, alt } => render_image(dest, alt, p),
+        Segment::Math { tex } => render_math(tex, p),
     });
     match content.segments.len() {
         0 => div().into_any_element(),
         1 => parts.next().unwrap_or_else(|| div().into_any_element()),
         _ => v_flex().gap_1().children(parts).into_any_element(),
+    }
+}
+
+/// A display formula, centred; one that does not parse shows its source and the reason.
+fn render_math(tex: &str, p: &Palette) -> AnyElement {
+    let em = f32::from(p.font_size) * MATH_SCALE;
+    match p.math.image(tex, p.foreground, em) {
+        Ok(image) => h_flex()
+            .w_full()
+            .justify_center()
+            .child(img(image).max_w_full())
+            .into_any_element(),
+        Err(error) => v_flex()
+            .child(div().font_family(p.mono.clone()).child(tex.to_string()))
+            .child(div().text_xs().text_color(p.danger).child(error))
+            .into_any_element(),
     }
 }
 

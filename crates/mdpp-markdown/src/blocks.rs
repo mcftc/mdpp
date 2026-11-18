@@ -34,6 +34,10 @@ pub enum Segment {
         dest: String,
         alt: String,
     },
+    /// Display math (`$$…$$`), as written between the dollars.
+    Math {
+        tex: String,
+    },
 }
 
 /// The inline content of a paragraph, heading or table cell.
@@ -79,6 +83,7 @@ impl Inlines {
             .map(|segment| match segment {
                 Segment::Text { text, .. } => text.as_str(),
                 Segment::Image { alt, .. } => alt.as_str(),
+                Segment::Math { tex } => tex.as_str(),
             })
             .collect()
     }
@@ -258,9 +263,15 @@ impl Builder {
                 }
             },
             Event::Code(text) => self.styled(range, &text, |s| s.code = true),
-            Event::InlineMath(text) | Event::DisplayMath(text) => {
-                self.styled(range, &text, |s| s.math = true)
+            Event::InlineMath(text) => self.styled(range, &text, |s| s.math = true),
+            // Display math becomes its own segment (drawn as a formula); inside an image's alt
+            // text it stays text.
+            Event::DisplayMath(text) if self.image.is_none() => {
+                self.inlines(range).segments.push(Segment::Math {
+                    tex: text.trim().to_string(),
+                })
             }
+            Event::DisplayMath(text) => self.styled(range, &text, |s| s.math = true),
             Event::Html(text) => match &mut self.leaf {
                 Some(Leaf::Html { text: html, .. }) => html.push_str(&text),
                 _ => self.styled(range, &text, |s| s.html = true),
@@ -790,6 +801,31 @@ Note[^1].
                 language: Some("yaml".into()),
                 text: "title: x".into()
             }
+        );
+    }
+
+    #[test]
+    fn display_math_is_its_own_segment() {
+        let blocks = parse("Before $a^2$ and\n$$\n\\frac{1}{2}\n$$\nafter.\n");
+        let BlockKind::Paragraph(inlines) = &blocks[0].kind else {
+            panic!("{blocks:?}")
+        };
+        let kinds: Vec<_> = inlines
+            .segments
+            .iter()
+            .map(|s| match s {
+                Segment::Text { text, .. } => format!("text {text:?}"),
+                Segment::Math { tex } => format!("math {tex:?}"),
+                Segment::Image { .. } => "image".into(),
+            })
+            .collect();
+        assert_eq!(
+            kinds,
+            [
+                "text \"Before a^2 and \"",
+                "math \"\\\\frac{1}{2}\"",
+                "text \" after.\""
+            ]
         );
     }
 
