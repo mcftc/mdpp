@@ -3,9 +3,13 @@
 A free, open-source, lightweight Markdown editor for Linux and Windows, written in Rust —
 Notepad++'s speed and reliability, with Markdown intellisense built in.
 
-**Status: Phases 2–3** (Markdown core and intellisense) — usable for daily editing, not yet
-released.
-See [docs/PROGRESS.md](docs/PROGRESS.md).
+**Status: 0.1.0 alpha** — usable for daily editing on Linux; Windows builds come from the
+release workflow. See [docs/PROGRESS.md](docs/PROGRESS.md) for what is done and what is open.
+
+**Install (Linux):** download `mdpp-<version>-x86_64-linux.tar.gz` from
+[Releases](https://github.com/mcftc/mdpp/releases), unpack it and run `./install.sh` — MD++ goes
+to `~/.local/bin`, appears in the application menu and opens `.md` files
+(`./install.sh --uninstall` removes it).
 
 - Tabs (close others / to the right / saved, reopen closed), open/save/save all, recent files,
   drag-and-drop, encodings (UTF-8/16, legacy code pages, reopen/save with), line-ending conversion
