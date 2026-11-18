@@ -17,9 +17,11 @@ pub mod navigate;
 mod paths;
 pub mod table;
 
-pub use complete::{Completion, CompletionKind, Context, ContextKind, candidates, context_at};
+pub use complete::{
+    Completion, CompletionKind, Context, ContextKind, candidates, context_at, is_image,
+};
 pub use diagnostics::{Diagnostic, RULES, diagnose};
 pub use paths::{
     DirEntry, FileSystem, OtherHeading, PathSource, file_uri, headings_of, is_markdown,
-    path_from_file_uri, percent_decode,
+    path_from_file_uri, percent_decode, percent_encode_path,
 };

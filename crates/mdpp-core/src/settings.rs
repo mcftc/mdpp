@@ -36,6 +36,7 @@ pub struct Settings {
     pub recent_files_max: usize,
     pub workspace_max_files: usize,
     pub search_max_file_bytes: u64,
+    pub assets_dir_template: String,
     pub window_width: f32,
     pub window_height: f32,
     pub menu_bar: bool,

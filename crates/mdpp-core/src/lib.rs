@@ -1,6 +1,7 @@
 //! Documents, files, sessions and settings for MD++ — everything below the UI that is not
 //! Markdown-specific. Never depends on a UI toolkit.
 
+pub mod assets;
 pub mod cli;
 pub mod crash;
 pub mod file;

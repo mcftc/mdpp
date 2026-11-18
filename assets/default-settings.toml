@@ -35,6 +35,10 @@ recent_files_max = 10
 # An opened folder (mdpp <folder>, File → Open Folder) is listed up to this many files, skipping
 # what Git ignores and hidden files; the rest is left out of the panel, quick open and search.
 workspace_max_files = 5000
+# Pasted and dropped images are stored in this folder next to the document ({doc_stem}: the
+# document's name without extension) and linked from it. Images already inside the document's
+# folder are linked where they are.
+assets_dir_template = "assets/{doc_stem}"
 # Find in files (Ctrl+Shift+F) skips files larger than this (bytes).
 search_max_file_bytes = 4194304
 

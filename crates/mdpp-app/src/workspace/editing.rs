@@ -5,11 +5,85 @@
 //! `Edit`; here it is applied as a single undo step.
 
 use std::ops::{Range, RangeInclusive};
+use std::path::PathBuf;
 
 use gpui_kit::component::input::{self, Rope};
 use gpui_kit::*;
+use mdpp_core::assets::{PASTED_IMAGE_STEM, free_name, image_folder, link_from};
 use mdpp_lang::assist::{self, Edit};
-use mdpp_lang::{lines, table};
+use mdpp_lang::{lines, percent_encode_path, table};
+
+/// An image to put into the document: pasted bytes or a dropped file.
+pub(super) enum NewImage {
+    Bytes {
+        extension: &'static str,
+        bytes: Vec<u8>,
+    },
+    File(PathBuf),
+}
+
+/// Store `image` for document `doc`; returns its link (relative to the document, unencoded) and
+/// a name for the alt text.
+fn store_image(
+    doc: &std::path::Path,
+    template: &str,
+    image: NewImage,
+) -> Result<(String, String), String> {
+    if let NewImage::File(path) = &image
+        && let Some(link) = link_from(doc, path)
+    {
+        return Ok((link, stem_of(path)));
+    }
+    let Some((folder, folder_link)) = image_folder(doc, template) else {
+        return Err(format!(
+            "assets_dir_template `{template}` must stay inside the document's folder."
+        ));
+    };
+    std::fs::create_dir_all(&folder)
+        .map_err(|e| format!("Could not create {}: {e}", folder.display()))?;
+    let (name, alt) = match &image {
+        NewImage::Bytes { extension, .. } => (
+            free_name(&folder, PASTED_IMAGE_STEM, extension),
+            String::new(),
+        ),
+        NewImage::File(path) => {
+            let extension = path
+                .extension()
+                .map(|e| e.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            (
+                free_name(&folder, &stem_of(path), &extension),
+                stem_of(path),
+            )
+        }
+    };
+    let target = folder.join(&name);
+    let written = match image {
+        NewImage::Bytes { bytes, .. } => std::fs::write(&target, bytes),
+        NewImage::File(path) => std::fs::copy(&path, &target).map(drop),
+    };
+    written.map_err(|e| format!("Could not store the image in {}: {e}", target.display()))?;
+    let link = if folder_link.is_empty() {
+        name
+    } else {
+        format!("{folder_link}/{name}")
+    };
+    Ok((link, alt))
+}
+
+fn stem_of(path: &std::path::Path) -> String {
+    path.file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Encode each part of a `/`-separated link.
+fn percent_encode_link(link: &str) -> String {
+    link.split('/')
+        .map(percent_encode_path)
+        .collect::<Vec<_>>()
+        .join("/")
+}
 
 use super::*;
 
@@ -134,14 +208,33 @@ impl Workspace {
         }
     }
 
-    /// Paste: a URL pasted over selected text becomes a link; anything else pastes normally.
+    /// Paste: an image is stored next to the document and linked; a URL pasted over selected
+    /// text becomes a link; anything else pastes normally.
     pub(super) fn smart_paste(
         &mut self,
         _: &SmartPaste,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let clipboard = cx.read_from_clipboard().and_then(|item| item.text());
+        let item = cx.read_from_clipboard();
+        // Text wins when the clipboard also has it (a browser copy carries both).
+        let image = item.as_ref().and_then(|item| {
+            let text = item
+                .entries()
+                .iter()
+                .any(|e| matches!(e, ClipboardEntry::String(_)));
+            item.entries().iter().find_map(|entry| match entry {
+                ClipboardEntry::Image(image) if !text => Some(NewImage::Bytes {
+                    extension: image.format.extension(),
+                    bytes: image.bytes.clone(),
+                }),
+                _ => None,
+            })
+        });
+        if let Some(image) = image {
+            return self.insert_images(vec![image], window, cx);
+        }
+        let clipboard = item.and_then(|item| item.text());
         let state = self.active_document().read(cx).editor().read(cx);
         let edit = clipboard
             .and_then(|text| assist::paste_link(state.text(), state.selected_range(), &text));
@@ -149,6 +242,52 @@ impl Workspace {
             Some(edit) => self.apply_edit(edit, window, cx),
             None => window.dispatch_action(Box::new(input::Paste), cx),
         }
+    }
+
+    /// Store images next to the active document (`assets_dir_template`) and insert their links
+    /// at the caret. An image already inside the document's folder is linked where it is.
+    pub(super) fn insert_images(
+        &mut self,
+        images: Vec<NewImage>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let doc = self.active_document().read(cx);
+        let Some(doc_path) = doc.path().map(std::path::Path::to_path_buf) else {
+            let message = "Save the document first: images are stored next to it.";
+            return window.push_notification(Notification::warning(message), cx);
+        };
+        let state = doc.editor().read(cx);
+        let selection = state.selected_range();
+        let selected = state.text().slice(selection.clone()).to_string();
+        let mut links = Vec::new();
+        for image in images {
+            match store_image(&doc_path, &self.settings.assets_dir_template, image) {
+                Ok((link, name)) => {
+                    let alt = if selected.is_empty() {
+                        name
+                    } else {
+                        selected.clone()
+                    };
+                    links.push(format!("![{alt}]({})", percent_encode_link(&link)));
+                }
+                Err(problem) => window.push_notification(Notification::error(problem), cx),
+            }
+        }
+        if links.is_empty() {
+            return;
+        }
+        let text = links.join("\n");
+        let end = selection.start + text.len();
+        self.apply_edit(
+            Edit {
+                range: selection,
+                text,
+                select: end..end,
+            },
+            window,
+            cx,
+        );
     }
 
     fn toggle_marker(&mut self, marker: &str, window: &mut Window, cx: &mut Context<Self>) {

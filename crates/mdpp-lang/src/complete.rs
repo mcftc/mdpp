@@ -369,7 +369,8 @@ pub fn candidates(
     out
 }
 
-fn is_image(name: &str) -> bool {
+/// Whether a file name is an image, by its extension (`data/image-extensions.txt`).
+pub fn is_image(name: &str) -> bool {
     name.rsplit_once('.')
         .is_some_and(|(_, ext)| IMAGE_EXTENSIONS.contains(&ext.to_lowercase().as_str()))
 }

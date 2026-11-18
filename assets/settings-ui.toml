@@ -44,6 +44,10 @@ title = "Recent files"
 settings = ["recent_files_max"]
 
 [[page.group]]
+title = "Images"
+settings = ["assets_dir_template"]
+
+[[page.group]]
 title = "Folder"
 settings = ["workspace_max_files", "search_max_file_bytes"]
 

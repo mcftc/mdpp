@@ -1318,9 +1318,20 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::find_next))
             .on_action(cx.listener(Self::find_previous))
             .on_action(cx.listener(Self::close_bar))
-            // Files dropped on the window open as tabs.
+            // Dropped images are linked into the document; other files open as tabs.
             .on_drop(cx.listener(|this, paths: &ExternalPaths, window, cx| {
-                this.open_paths(paths.paths().to_vec(), window, cx)
+                let (images, others): (Vec<PathBuf>, Vec<PathBuf>) =
+                    paths.paths().iter().cloned().partition(|path| {
+                        path.is_file()
+                            && mdpp_lang::is_image(
+                                &path.file_name().unwrap_or_default().to_string_lossy(),
+                            )
+                    });
+                if !images.is_empty() {
+                    let images = images.into_iter().map(editing::NewImage::File).collect();
+                    this.insert_images(images, window, cx);
+                }
+                this.open_paths(others, window, cx)
             }))
             .bg(cx.theme().background)
             .when(self.settings.menu_bar, |root| {

@@ -760,6 +760,39 @@ impl Workspace {
                 doc.path().is_some_and(|p| p.ends_with("notes/zz-note.md"))
             })
             .unwrap_or(false);
+        // Images: pasted bytes and a file from elsewhere are stored in assets/<doc>/, a file
+        // already next to the document is linked where it is.
+        let outside = path.with_file_name("outside pic.png");
+        std::fs::write(&outside, b"png").ok();
+        std::fs::write(root.join("notes/near.png"), b"png").ok();
+        let images = this
+            .update_in(cx, |this, window, cx| {
+                let images = vec![
+                    editing::NewImage::Bytes {
+                        extension: "png",
+                        bytes: b"png".to_vec(),
+                    },
+                    editing::NewImage::File(outside.clone()),
+                    editing::NewImage::File(root.join("notes/near.png")),
+                ];
+                this.insert_images(images, window, cx);
+                let text = this.active_document().read(cx).editor().read(cx).text().to_string();
+                let stored = ["image.png", "outside pic.png"]
+                    .iter()
+                    .all(|name| root.join("notes/assets/zz-note").join(name).exists());
+                let linked = text.contains(
+                    "![](assets/zz-note/image.png)\n![outside pic](assets/zz-note/outside%20pic.png)\n![near](near.png)",
+                );
+                // Back to the saved text, so closing the tab later asks nothing.
+                let editor = this.active_document().read(cx).editor().clone();
+                editor.update(cx, |state, cx| {
+                    state.replace_all("# Z\n\nfind the needle\n".to_string(), window, cx)
+                });
+                format!("stored={stored} linked={linked}")
+            })
+            .unwrap_or_default();
+        println!("BENCH check images {images}");
+        let _ = std::fs::remove_file(&outside);
         // Find in files: Ctrl+Shift+F, type, Enter searches at once; the match opens at its line.
         for key in ["ctrl-shift-f", "n", "e", "e", "d", "l", "e", "enter"] {
             press(key, cx);

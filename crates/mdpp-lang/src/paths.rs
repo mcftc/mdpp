@@ -180,7 +180,8 @@ pub fn percent_decode(s: &str) -> String {
 }
 
 /// Encode what a link destination cannot contain unescaped.
-pub(crate) fn percent_encode_path(s: &str) -> String {
+/// A file name made safe for a link destination (spaces, parentheses, `%`).
+pub fn percent_encode_path(s: &str) -> String {
     s.replace('%', "%25")
         .replace(' ', "%20")
         .replace('(', "%28")
