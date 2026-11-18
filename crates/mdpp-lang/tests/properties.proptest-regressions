@@ -1,0 +1,9 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 0cd2355248a82e85e7a6afd80182c069b92d3c1c576b6ea7241b4ee0f44fff97 # shrinks to text = "# Title\n# Title\n- [ ] task\n# Title\n| a | b |\n| --- | --- |\n\n[|(ö ```rust\nfn x() {}\n```\n```rust\nfn x() {}\n```\n日本```rust\nfn x() {}\n```\n\n\nçş", a = 2048257174050012609, b = 8510097557825
+cc 0b4b46738f789f2bab287132e26337b73066f82a475beb2024b6fde4c4da9fa0 # shrinks to text = "```rust\nfn x() {}\n```\n- [ ] task\n-\n(üç```rust\nfn x() {}\n```\n- [ ] task\n", a = 48766, b = 1086684399300284613
+cc 2d5bc3c76cdffb022fffaaf5657569cd5e36129147e6a630f51419beb8578e47 # shrinks to text = "- [ ] task\n日本```rust\nfn x() {}\n```\n\n```rust\nfn x() {}\n```\n\n| a | b |\n| --- | --- |\n- [ ] task\n```rust\nfn x() {}\n```\n| a | b |\n| --- | --- |\n日本| a | b |\n| --- | --- |\n| a | b |\n| --- | --- |\n```rust\nfn x() {}\n```\n日本# Title\n", a = 6310973292153347636, b = 5954213368396322686

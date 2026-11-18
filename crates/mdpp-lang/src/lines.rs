@@ -40,19 +40,22 @@ pub fn duplicate_lines(text: &Rope, selection: Range<usize>) -> Edit {
 /// Delete the selected lines; the caret keeps its column on the line that takes their place.
 pub fn delete_lines(text: &Rope, selection: Range<usize>) -> Edit {
     let (first, last, mut range) = block(text, &selection);
-    let column = selection.start - range.start;
-    let line_len = |row: usize| {
+    // The column in characters, so the caret lands on a character of the other line (found by
+    // the property tests: a byte column fell inside `日`).
+    let column = text.slice(range.start..selection.start).chars().count();
+    let at_column = |row: usize| {
         let line = text.line(row, LineType::LF);
-        line.len() - usize::from(line.chars().last() == Some('\n'))
+        let chars = line.chars().take_while(|&c| c != '\n').take(column);
+        chars.map(char::len_utf8).sum::<usize>()
     };
     let rows = text.len_lines(LineType::LF);
     let caret = if last + 1 < rows && text.slice(range.clone()).chars().last() == Some('\n') {
-        range.start + column.min(line_len(last + 1))
+        range.start + at_column(last + 1)
     } else if first > 0 {
         // Deleting the last lines: also remove the break before them; land on the line above.
         range.start -= 1;
         let above = text.line_to_byte_idx(first - 1, LineType::LF);
-        above + column.min(line_len(first - 1))
+        above + at_column(first - 1)
     } else {
         0
     };
@@ -99,10 +102,15 @@ pub fn move_lines(text: &Rope, selection: Range<usize>, up: bool) -> Option<Edit
         edit_range.start + other_text.len() + usize::from(!other_text.ends_with('\n'))
     };
     let by = moved_start as isize - range.start as isize;
+    // A selection that took the moved block's final line break along loses it with the break
+    // (found by the property tests: it ended one past the text).
+    let end = edit_range.start + joined.len();
+    let select = shifted(&selection, by);
+    let select = select.start.min(end)..select.end.min(end);
     Some(Edit {
         range: edit_range,
         text: joined,
-        select: shifted(&selection, by),
+        select,
     })
 }
 
@@ -146,6 +154,23 @@ mod tests {
 
     fn down(marked: &str) -> Option<String> {
         run(marked, |t, s| move_lines(t, s, false))
+    }
+
+    #[test]
+    fn deleting_keeps_the_column_in_characters() {
+        // Found by the property tests: the caret fell inside a multi-byte character.
+        let text = Rope::from_str("abc\n日本語\n");
+        let edit = delete_lines(&text, 2..2);
+        assert_eq!(edit.select, 6..6); // after `日本`, column 2
+    }
+
+    #[test]
+    fn selection_with_the_final_break_stays_inside() {
+        // Found by the property tests: the selection ended past the text.
+        let text = Rope::from_str("a\nb\n");
+        let edit = move_lines(&text, 0..4, false).unwrap();
+        assert_eq!(edit.text, "\na\nb");
+        assert_eq!(edit.select, 1..4);
     }
 
     #[test]

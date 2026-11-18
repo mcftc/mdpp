@@ -46,6 +46,8 @@ ratex-types = "0.1.16"
 ratex-svg = { version = "0.1.16", features = ["embed-fonts"] }
 # The system language for `language = "auto"` (already built: cosmic-text uses it).
 sys-locale = "0.3"
+# Property tests (PLAN §8): random documents for round trips and "never panics" (tests only).
+proptest = { version = "1", default-features = false, features = ["std"] }
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 smol = "2"
 # Fenced-code highlighting (PLAN D5): the parser and bat's ~200 syntaxes, pure-Rust regex — the

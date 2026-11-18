@@ -194,13 +194,23 @@ pub fn on_enter(text: &Rope, offset: usize) -> Option<Edit> {
 pub fn toggle_wrap(text: &Rope, selection: Range<usize>, marker: &str) -> Edit {
     let m = marker.len();
     let selected = text.slice(selection.clone()).to_string();
-    let before = (selection.start >= m)
-        .then(|| text.slice(selection.start - m..selection.start).to_string());
-    let after = (selection.end + m <= text.len())
-        .then(|| text.slice(selection.end..selection.end + m).to_string());
+    // The `m` bytes next to the selection, when they are whole characters (a multi-byte
+    // character there is not a marker).
+    let around = |range: Range<usize>| {
+        (range.end <= text.len()
+            && text.is_char_boundary(range.start)
+            && text.is_char_boundary(range.end))
+        .then(|| text.slice(range).to_string())
+    };
+    let before = selection
+        .start
+        .checked_sub(m)
+        .and_then(|start| around(start..selection.start));
+    let after = around(selection.end..selection.end + m);
     // A single `*` must not be taken for half of `**` (and vice versa).
-    let clean_edge =
-        |outer: Option<usize>| outer.is_none_or(|i| marker != "*" || text.slice(i..i + 1) != "*");
+    let clean_edge = |outer: Option<usize>| {
+        outer.is_none_or(|i| marker != "*" || around(i..i + 1).as_deref() != Some("*"))
+    };
     if before.as_deref() == Some(marker)
         && after.as_deref() == Some(marker)
         && clean_edge(selection.start.checked_sub(m + 1))
@@ -501,6 +511,15 @@ mod tests {
         let offset = text_with_caret.find('|').unwrap();
         let text = text_with_caret.replace('|', "");
         on_enter(&Rope::from_str(&text), offset).map(|edit| show(&text, &edit))
+    }
+
+    #[test]
+    fn markers_next_to_multibyte_characters() {
+        // Found by the property tests: a selection right after `ö` crashed Ctrl+B.
+        let text = Rope::from_str("ö x ş");
+        // `ö` is two bytes: the two bytes before `x` start inside it.
+        assert_eq!(toggle_wrap(&text, 3..4, "**").text, "**x**");
+        assert_eq!(toggle_wrap(&text, 3..4, "*").text, "*x*");
     }
 
     #[test]

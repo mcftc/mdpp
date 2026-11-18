@@ -18,4 +18,5 @@ unicode-width.workspace = true
 workspace = true
 
 [dev-dependencies]
+proptest.workspace = true
 mdpp-markdown.workspace = true

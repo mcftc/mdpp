@@ -20,5 +20,9 @@ interprocess.workspace = true
 ignore.workspace = true
 sys-locale.workspace = true
 
+[dev-dependencies]
+proptest.workspace = true
+encoding_rs.workspace = true
+
 [lints]
 workspace = true
