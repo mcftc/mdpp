@@ -47,6 +47,7 @@ items = [
   { label = "Replace", action = "mdpp::FindReplace" },
   { label = "Find Next", action = "mdpp::FindNext" },
   { label = "Find Previous", action = "mdpp::FindPrevious" },
+  { label = "Find in Files", action = "mdpp::FindInFiles" },
   { separator = true },
   { submenu = "Format", items = [
     { label = "Bold", action = "mdpp::ToggleBold" },

@@ -38,6 +38,7 @@ use crate::document::{DiskConflict, Document, DocumentChanged, OpenedDoc, Persis
 use crate::find::{CloseRequested, FindBar};
 use crate::goto::GoToLineBar;
 use crate::watch::{DiskWatcher, folder_of};
+use folder::Side;
 use gpui_kit::component::menu::DropdownMenu as _;
 use mdpp_core::text::{Eol, common_encodings, encoding_for_label};
 
@@ -96,6 +97,7 @@ actions!(
         OpenFolder,
         CloseFolder,
         ToggleFolderPanel,
+        FindInFiles,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -236,7 +238,10 @@ pub struct Workspace {
     show_outline: bool,
     /// The folder opened with `mdpp <folder>` or File → Open Folder, and whether its panel shows.
     folder: Option<folder::FolderState>,
-    show_folder: bool,
+    /// The left panel shows, and which view: the folder or find in files.
+    show_side: bool,
+    side: Side,
+    search_panel: Entity<crate::search_panel::SearchPanel>,
     /// The palette, while it is open.
     palette: Option<(Entity<crate::palette::Palette>, Subscription)>,
     /// The settings window, while it is open.
@@ -288,7 +293,28 @@ impl Workspace {
             .ok();
         let find_bar = cx.new(|cx| FindBar::new(window, cx));
         let goto_bar = cx.new(|cx| GoToLineBar::new(window, cx));
+        let search_panel = {
+            let workspace = cx.entity().downgrade();
+            let files: crate::search_panel::FileSource = Rc::new(move |cx: &App| {
+                workspace
+                    .upgrade()
+                    .map(|w| w.read(cx).searched_files(cx))
+                    .unwrap_or_default()
+            });
+            let (debounce, max_bytes) =
+                (settings.structure_debounce, settings.search_max_file_bytes);
+            cx.new(|cx| {
+                crate::search_panel::SearchPanel::new(files, debounce, max_bytes, window, cx)
+            })
+        };
         let subscriptions = vec![
+            cx.subscribe_in(
+                &search_panel,
+                window,
+                |this, _, found: &crate::search_panel::OpenMatch, window, cx| {
+                    this.open_and_report(vec![found.0.clone()], window, cx)
+                },
+            ),
             cx.subscribe_in(
                 &find_bar,
                 window,
@@ -320,7 +346,9 @@ impl Workspace {
             show_goto: false,
             show_outline: settings.outline_on_start,
             folder: None,
-            show_folder: false,
+            show_side: false,
+            side: Side::Folder,
+            search_panel,
             palette: None,
             settings_window: None,
             zoom: 0,
@@ -387,7 +415,7 @@ impl Workspace {
         self.recent = session.recent.clone();
         if let Some(root) = session.folder.clone().filter(|root| root.is_dir()) {
             self.open_folder(root, cx);
-            self.show_folder = session.folder_panel;
+            self.show_side = session.folder_panel;
         }
         let mut messages = Vec::new();
         // Without hot exit nothing of the tabs is kept (unsaved changes were asked about).
@@ -439,7 +467,7 @@ impl Workspace {
             wrap: self.wrap,
             recent: self.recent.clone(),
             folder: self.folder.as_ref().map(|f| f.root.clone()),
-            folder_panel: self.show_folder,
+            folder_panel: self.show_side,
             documents: entries,
         };
         let unchanged =
@@ -599,6 +627,9 @@ impl Workspace {
             theme.cursor_blink =
                 gpui_kit::component::input::CursorBlink::blinking(settings.cursor_blink_interval)
                     .with_idle_timeout(settings.cursor_blink_idle_timeout);
+        });
+        self.search_panel.update(cx, |panel, _| {
+            panel.set_limits(settings.structure_debounce, settings.search_max_file_bytes)
         });
         self.settings = settings;
         eprintln!("mdpp: settings reloaded");
@@ -1197,7 +1228,7 @@ impl Render for Workspace {
                 .text_size(px(self.font_size())),
         );
         let preview = doc.preview().clone();
-        let folder = self.show_folder.then(|| self.render_folder(cx)).flatten();
+        let folder = self.render_side(cx);
         let body = if self.show_preview || self.show_outline || folder.is_some() {
             let mut panels = h_resizable("workspace-panels");
             if let Some(folder) = folder {
@@ -1258,6 +1289,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::open_folder_dialog))
             .on_action(cx.listener(Self::close_folder))
             .on_action(cx.listener(Self::toggle_folder_panel))
+            .on_action(cx.listener(Self::find_in_files))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
             .on_action(cx.listener(Self::close_other_tabs))

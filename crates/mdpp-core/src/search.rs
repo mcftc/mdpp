@@ -6,8 +6,11 @@
 //! ropey 2) and fast enough for interactive search.
 
 use std::ops::Range;
+use std::path::{Path, PathBuf};
 
 use regex::{Regex, RegexBuilder};
+
+use crate::text::{Eol, decode};
 
 /// More matches than this are not collected: the count shows "10000+" and the editor stays fast.
 pub const MAX_MATCHES: usize = 10_000;
@@ -96,6 +99,102 @@ impl Search {
     }
 }
 
+/// One match of find in files, as its result row shows it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FileMatch {
+    pub path: PathBuf,
+    /// Line and column (in characters), from 0.
+    pub line: u32,
+    pub column: u32,
+    /// The line around the match, and the match within it.
+    pub preview: String,
+    pub highlight: Range<usize>,
+}
+
+/// What find in files found, in file order.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FileResults {
+    pub matches: Vec<FileMatch>,
+    pub files_with_matches: usize,
+    /// Stopped at the match limit.
+    pub truncated: bool,
+}
+
+/// Characters of a result line shown before the match.
+const PREVIEW_BEFORE: usize = 40;
+/// Characters of a result line shown in all.
+const PREVIEW_CHARS: usize = 160;
+
+/// Search `files` (decoded like opened files; binary files and files over `max_bytes` are
+/// skipped) for at most `limit` matches.
+pub fn search_files(
+    search: &Search,
+    files: &[PathBuf],
+    max_bytes: u64,
+    limit: usize,
+) -> FileResults {
+    let mut results = FileResults::default();
+    for path in files {
+        let Some(text) = read_text(path, max_bytes) else {
+            continue;
+        };
+        let found = search.find_all(&text, None, limit - results.matches.len());
+        if found.is_empty() {
+            continue;
+        }
+        results.files_with_matches += 1;
+        let mut line = 0;
+        let mut line_start = 0;
+        let mut counted = 0; // bytes up to which newlines were counted
+        for range in found {
+            line += text[counted..range.start].matches('\n').count() as u32;
+            counted = range.start;
+            line_start = text[..range.start]
+                .rfind('\n')
+                .map_or(0, |i| i + 1)
+                .max(line_start);
+            let line_end = text[range.start..]
+                .find('\n')
+                .map_or(text.len(), |i| range.start + i);
+            let column = text[line_start..range.start].chars().count();
+            let skip = column.saturating_sub(PREVIEW_BEFORE);
+            let shown_start = text[line_start..]
+                .char_indices()
+                .nth(skip)
+                .map_or(line_start, |(i, _)| line_start + i);
+            let shown: String = text[shown_start..line_end]
+                .chars()
+                .take(PREVIEW_CHARS)
+                .collect();
+            let trimmed = shown.trim_start();
+            let cut = (range.start - shown_start).saturating_sub(shown.len() - trimmed.len());
+            let preview = trimmed.trim_end().to_string();
+            let highlight = cut.min(preview.len())..(cut + range.len()).min(preview.len());
+            results.matches.push(FileMatch {
+                path: path.clone(),
+                line,
+                column: column as u32,
+                preview,
+                highlight,
+            });
+        }
+        if results.matches.len() >= limit {
+            results.truncated = true;
+            break;
+        }
+    }
+    results
+}
+
+fn read_text(path: &Path, max_bytes: u64) -> Option<String> {
+    if std::fs::metadata(path).ok()?.len() > max_bytes {
+        return None;
+    }
+    decode(&std::fs::read(path).ok()?, Eol::Lf)
+        .ok()
+        .map(|loaded| loaded.text)
+}
+
 /// Not preceded or followed by a word character (works for patterns like `c++` too, unlike `\b`).
 fn is_whole_word(text: &str, range: &Range<usize>) -> bool {
     let is_word = |c: char| c.is_alphanumeric() || c == '_';
@@ -122,6 +221,51 @@ mod tests {
         case_sensitive: false,
         whole_word: false,
     };
+
+    #[test]
+    fn find_in_files_rows() {
+        let dir = std::env::temp_dir().join(format!("mdpp-search-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (a, b, binary) = (dir.join("a.md"), dir.join("b.md"), dir.join("c.bin"));
+        let long = format!("{}needle end", "x".repeat(100));
+        std::fs::write(
+            &a,
+            format!("one\r\n  two needle\r\n{long}\nneedle needle\n"),
+        )
+        .unwrap();
+        std::fs::write(&b, "nothing here").unwrap();
+        std::fs::write(&binary, b"needle\0\0").unwrap();
+        let search = Search::new("needle", PLAIN).unwrap();
+        let files = [a.clone(), b, binary];
+        let found = search_files(&search, &files, 1 << 20, 100);
+        assert_eq!(found.files_with_matches, 1);
+        let rows: Vec<_> = found
+            .matches
+            .iter()
+            .map(|m| (m.line, m.column, &m.preview[m.highlight.clone()]))
+            .collect();
+        assert_eq!(
+            rows,
+            [
+                (1, 6, "needle"),
+                (2, 100, "needle"),
+                (3, 0, "needle"),
+                (3, 7, "needle")
+            ]
+        );
+        assert_eq!(found.matches[0].preview, "two needle");
+        assert!(
+            found.matches[1].preview.starts_with(&"x".repeat(40))
+                && found.matches[1].preview.len() < 100
+        );
+        let capped = search_files(&search, &files, 1 << 20, 2);
+        assert!(capped.truncated && capped.matches.len() == 2);
+        assert!(
+            search_files(&search, &files, 4, 100).matches.is_empty(),
+            "size cap"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn literal_and_case() {

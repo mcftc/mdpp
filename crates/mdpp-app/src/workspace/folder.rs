@@ -3,6 +3,8 @@
 //! back to the front, so files made by other programs show up without a watcher on every folder.
 
 use std::collections::HashSet;
+
+use gpui_kit::component::Selectable as _;
 use std::sync::Arc;
 
 use mdpp_core::folder::{self, Listing, Tree};
@@ -12,6 +14,13 @@ use super::*;
 /// Indentation of one tree level and the panel's padding, in logical pixels.
 const TREE_INDENT: f32 = 12.0;
 const TREE_PADDING: f32 = 8.0;
+
+/// What the left panel shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Side {
+    Folder,
+    Search,
+}
 
 pub(super) struct FolderState {
     pub root: PathBuf,
@@ -42,7 +51,7 @@ impl Workspace {
             visible: Arc::default(),
             _scan: Task::ready(()),
         });
-        self.show_folder = true;
+        self.show_side = true;
         self.scan_folder(cx);
     }
 
@@ -100,6 +109,7 @@ impl Workspace {
         cx.notify();
     }
 
+    /// The left panel with the folder; again, it closes. With no folder open: choose one.
     pub(super) fn toggle_folder_panel(
         &mut self,
         _: &ToggleFolderPanel,
@@ -109,8 +119,93 @@ impl Workspace {
         if self.folder.is_none() {
             return self.open_folder_dialog(&OpenFolder, window, cx);
         }
-        self.show_folder = !self.show_folder;
+        self.show_side = !(self.show_side && self.side == Side::Folder);
+        self.side = Side::Folder;
         cx.notify();
+    }
+
+    /// The left panel with find in files, starting from the selection when it is in one line.
+    pub(super) fn find_in_files(
+        &mut self,
+        _: &FindInFiles,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.show_side = true;
+        self.side = Side::Search;
+        let editor = self.active_document().read(cx).editor().clone();
+        let selected = crate::find::selected_line(&editor, cx);
+        self.search_panel
+            .update(cx, |panel, cx| panel.focus(selected, window, cx));
+        cx.notify();
+    }
+
+    /// What find in files searches: the folder's files, or the open tabs' files without one.
+    pub(super) fn searched_files(&self, cx: &App) -> Vec<PathBuf> {
+        match &self.folder {
+            Some(folder) => folder.files().collect(),
+            None => self
+                .documents
+                .iter()
+                .filter_map(|d| d.read(cx).path().map(std::path::Path::to_path_buf))
+                .collect(),
+        }
+    }
+
+    /// The left panel: Folder | Search, then the chosen view.
+    pub(super) fn render_side(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !self.show_side {
+            return None;
+        }
+        let content = match self.side {
+            Side::Folder => self.render_folder(cx)?,
+            Side::Search => self.search_panel.clone().into_any_element(),
+        };
+        let tab = |id: &'static str, label: &'static str, side: Side| {
+            Button::new(id)
+                .label(label)
+                .ghost()
+                .xsmall()
+                .selected(self.side == side)
+        };
+        let tabs = h_flex()
+            .gap_1()
+            .px_1()
+            .py_0p5()
+            .border_b_1()
+            .border_color(cx.theme().border)
+            .child(
+                tab("side-folder", "Folder", Side::Folder).on_click(cx.listener(
+                    |this, _, window, cx| {
+                        if this.side != Side::Folder || this.folder.is_none() {
+                            this.toggle_folder_panel(&ToggleFolderPanel, window, cx)
+                        }
+                    },
+                )),
+            )
+            .child(tab("side-search", "Search", Side::Search).on_click(
+                cx.listener(|this, _, window, cx| this.find_in_files(&FindInFiles, window, cx)),
+            ))
+            .child(div().flex_1())
+            .child(
+                Button::new("side-close")
+                    .icon(IconName::Close)
+                    .ghost()
+                    .xsmall()
+                    .tooltip("Close the panel")
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.show_side = false;
+                        cx.notify();
+                    })),
+            );
+        Some(
+            v_flex()
+                .size_full()
+                .bg(cx.theme().sidebar)
+                .child(tabs)
+                .child(div().flex_1().min_h_0().child(content))
+                .into_any_element(),
+        )
     }
 
     fn toggle_tree_folder(&mut self, path: PathBuf, cx: &mut Context<Self>) {

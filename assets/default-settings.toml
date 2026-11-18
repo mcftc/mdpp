@@ -35,6 +35,8 @@ recent_files_max = 10
 # An opened folder (mdpp <folder>, File → Open Folder) is listed up to this many files, skipping
 # what Git ignores and hidden files; the rest is left out of the panel, quick open and search.
 workspace_max_files = 5000
+# Find in files (Ctrl+Shift+F) skips files larger than this (bytes).
+search_max_file_bytes = 4194304
 
 # Size of a new window, in logical pixels.
 window_width = 1100

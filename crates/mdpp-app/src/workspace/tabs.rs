@@ -401,7 +401,7 @@ impl Workspace {
             .ghost()
             .small()
             .tooltip("Folder")
-            .selected(self.show_folder && self.folder.is_some())
+            .selected(self.show_side && self.folder.is_some())
             .on_click(cx.listener(|this, _, window, cx| {
                 this.toggle_folder_panel(&ToggleFolderPanel, window, cx)
             }))
@@ -481,10 +481,7 @@ impl Workspace {
     fn menu_state(&self, cx: &App) -> menus::MenuState {
         let wrap = self.active_document().read(cx).soft_wrap();
         let checked = [
-            (
-                menus::CHECK_FOLDER,
-                self.show_folder && self.folder.is_some(),
-            ),
+            (menus::CHECK_FOLDER, self.show_side && self.folder.is_some()),
             (menus::CHECK_OUTLINE, self.show_outline),
             (menus::CHECK_PREVIEW, self.show_preview),
             (menus::CHECK_WORD_WRAP, wrap),

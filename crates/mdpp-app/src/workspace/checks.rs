@@ -122,6 +122,15 @@ impl Workspace {
     /// to the middle, check scroll sync. Destructive — run it on a scratch copy.
     /// Keystrokes through the real keymap: Enter continues a list, Ctrl+B bolds a selection,
     /// Shift+Enter stays a plain line break. Runs in a fresh untitled tab.
+    /// The active editor's caret line (from 0).
+    fn editor_line(this: &WeakEntity<Self>, cx: &mut AsyncWindowContext) -> Option<u32> {
+        this.update(cx, |this, cx| {
+            let doc = this.active_document().read(cx);
+            doc.editor().read(cx).cursor_position().line
+        })
+        .ok()
+    }
+
     async fn check_assists(this: &WeakEntity<Self>, cx: &mut AsyncWindowContext) {
         this.update_in(cx, |this, window, cx| {
             this.add_document(OpenedDoc::untitled(None), window, cx)
@@ -697,7 +706,7 @@ impl Workspace {
         let root = path.with_file_name("folder-check");
         let _ = std::fs::remove_dir_all(&root);
         for (file, text) in [
-            ("notes/zz-note.md", "# Z\n"),
+            ("notes/zz-note.md", "# Z\n\nfind the needle\n"),
             ("a.md", "a\n"),
             ("build/out.md", "x\n"),
             (".gitignore", "build/\n"),
@@ -714,7 +723,7 @@ impl Workspace {
         let listed = this
             .update(cx, |this, _| {
                 let folder = this.folder.as_ref()?;
-                Some((folder.listing.files.len(), this.show_folder))
+                Some((folder.listing.files.len(), this.show_side))
             })
             .ok()
             .flatten();
@@ -738,6 +747,28 @@ impl Workspace {
                 doc.path().is_some_and(|p| p.ends_with("notes/zz-note.md"))
             })
             .unwrap_or(false);
+        // Find in files: Ctrl+Shift+F, type, Enter searches at once; the match opens at its line.
+        for key in ["ctrl-shift-f", "n", "e", "e", "d", "l", "e", "enter"] {
+            press(key, cx);
+        }
+        cx.background_executor().timer(bench::SETTLE).await;
+        let found = this
+            .update(cx, |this, cx| {
+                this.search_panel.update(cx, |panel, cx| {
+                    let count = panel.match_count();
+                    panel.open_match(0, cx);
+                    count
+                })
+            })
+            .unwrap_or_default();
+        cx.background_executor()
+            .timer(bench::KEYSTROKE_INTERVAL)
+            .await;
+        let at_match = Self::editor_line(this, cx);
+        println!(
+            "BENCH check find_in_files matches={found} opened_at_line={}",
+            at_match == Some(2)
+        );
         println!(
             "BENCH check folder listed={} panel={} quick_open={opened}",
             listed.is_some_and(|(files, _)| files == 2), // a.md, notes/zz-note.md

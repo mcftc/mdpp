@@ -45,7 +45,7 @@ settings = ["recent_files_max"]
 
 [[page.group]]
 title = "Folder"
-settings = ["workspace_max_files"]
+settings = ["workspace_max_files", "search_max_file_bytes"]
 
 [[page]]
 title = "Window & Layout"
@@ -82,4 +82,5 @@ font_size = { min = 6, max = 72 }
 markup_fade = { min = 0, max = 1, step = 0.05 }
 recent_files_max = { min = 0, max = 100 }
 workspace_max_files = { min = 100, max = 100000, step = 100 }
+search_max_file_bytes = { min = 1024, max = 1073741824, step = 1048576 }
 "diagnostics.*" = { choices = ["error", "warning", "info", "hint", "off"] }

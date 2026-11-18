@@ -17,7 +17,57 @@ use mdpp_core::search::{MAX_MATCHES, Search, SearchOptions};
 /// Key context of the find and go-to-line bars: Escape inside their inputs closes them.
 pub const KEY_CONTEXT: &str = "Bar";
 /// Opacity of the match highlight drawn over the theme's warning colour.
-const MATCH_HIGHLIGHT_OPACITY: f32 = 0.35;
+pub const MATCH_HIGHLIGHT_OPACITY: f32 = 0.35;
+
+/// The editor's selection when it is a piece of one line — what a search starts from.
+pub fn selected_line(editor: &Entity<EditorState>, cx: &App) -> Option<String> {
+    let state = editor.read(cx);
+    let text = state.text().slice(state.selected_range()).to_string();
+    (!text.is_empty() && !text.contains('\n')).then_some(text)
+}
+
+/// A search option switch: a short label, its meaning in the tooltip.
+fn toggle_button(id: &'static str, label: &'static str, tooltip: &'static str, on: bool) -> Button {
+    Button::new(id)
+        .label(label)
+        .ghost()
+        .small()
+        .selected(on)
+        .tooltip(tooltip)
+}
+
+/// Picks one switch out of the search options.
+pub type OptionField = fn(&mut SearchOptions) -> &mut bool;
+/// What toggles an option in a view that has search options.
+pub type ToggleOption<T> = fn(&mut T, OptionField, &mut Window, &mut Context<T>);
+
+/// Match case, whole word and regular expression switches — shared by the find bar and find
+/// in files, so both look and behave alike.
+pub fn option_buttons<T: 'static>(
+    options: SearchOptions,
+    cx: &mut Context<T>,
+    toggle: ToggleOption<T>,
+) -> [Button; 3] {
+    let switches: [(&str, &str, &str, bool, OptionField); 3] = [
+        (
+            "match-case",
+            "Aa",
+            "Match case",
+            options.case_sensitive,
+            |o| &mut o.case_sensitive,
+        ),
+        ("whole-word", "W", "Whole word", options.whole_word, |o| {
+            &mut o.whole_word
+        }),
+        ("regex", ".*", "Regular expression", options.regex, |o| {
+            &mut o.regex
+        }),
+    ];
+    switches.map(|(id, label, tooltip, on, option)| {
+        toggle_button(id, label, tooltip, on)
+            .on_click(cx.listener(move |this, _, window, cx| toggle(this, option, window, cx)))
+    })
+}
 
 /// The bar asks the workspace to close it.
 pub struct CloseRequested;
@@ -88,12 +138,7 @@ impl FindBar {
         cx: &mut Context<Self>,
     ) {
         self.show_replace = replace;
-        let selected = {
-            let state = editor.read(cx);
-            let range = state.selected_range();
-            let text = state.text().slice(range).to_string();
-            (!text.is_empty() && !text.contains('\n')).then_some(text)
-        };
+        let selected = selected_line(&editor, cx);
         self.retarget(editor, window, cx);
         if let Some(text) = selected {
             self.query
@@ -322,48 +367,21 @@ impl FindBar {
 
 impl Render for FindBar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let [case, word, regex] = option_buttons(self.options, cx, Self::toggle);
         let theme = cx.theme();
         let status_color = if self.error.is_some() {
             theme.danger
         } else {
             theme.muted_foreground
         };
-        let toggle = |id: &'static str, label: &'static str, tooltip: &'static str, on: bool| {
-            Button::new(id)
-                .label(label)
-                .ghost()
-                .small()
-                .selected(on)
-                .tooltip(tooltip)
-        };
         let find_row = h_flex()
             .gap_1()
             .child(div().flex_1().child(Input::new(&self.query).small()))
+            .child(case)
+            .child(word)
+            .child(regex)
             .child(
-                toggle(
-                    "match-case",
-                    "Aa",
-                    "Match case",
-                    self.options.case_sensitive,
-                )
-                .on_click(cx.listener(|this, _, window, cx| {
-                    this.toggle(|o| &mut o.case_sensitive, window, cx)
-                })),
-            )
-            .child(
-                toggle("whole-word", "W", "Whole word", self.options.whole_word).on_click(
-                    cx.listener(|this, _, window, cx| {
-                        this.toggle(|o| &mut o.whole_word, window, cx)
-                    }),
-                ),
-            )
-            .child(
-                toggle("regex", ".*", "Regular expression", self.options.regex).on_click(
-                    cx.listener(|this, _, window, cx| this.toggle(|o| &mut o.regex, window, cx)),
-                ),
-            )
-            .child(
-                toggle(
+                toggle_button(
                     "in-selection",
                     "Sel",
                     "Find in selection",

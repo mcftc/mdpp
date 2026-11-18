@@ -219,3 +219,7 @@ action = "mdpp::CommandPalette"
 [[binding]]
 keys = "secondary-p"
 action = "mdpp::QuickOpen"
+
+[[binding]]
+keys = "secondary-shift-f"
+action = "mdpp::FindInFiles"
