@@ -76,6 +76,8 @@ items = [
 [[menu]]
 name = "View"
 items = [
+  { label = "Command Palette…", action = "mdpp::CommandPalette" },
+  { separator = true },
   { label = "Outline", action = "mdpp::ToggleOutline", check = "outline" },
   { label = "Preview", action = "mdpp::TogglePreview", check = "preview" },
   { label = "Word Wrap", action = "mdpp::ToggleWordWrap", check = "word_wrap" },
@@ -89,6 +91,8 @@ items = [
 [[menu]]
 name = "Go"
 items = [
+  { label = "Go to File…", action = "mdpp::QuickOpen" },
+  { label = "Go to Heading…", action = "mdpp::GoToHeading" },
   { label = "Go to Line…", action = "mdpp::GoToLine" },
   { label = "Go to Definition", action = "input::GoToDefinition" },
   { separator = true },

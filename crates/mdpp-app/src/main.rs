@@ -13,6 +13,7 @@ mod goto;
 mod highlight;
 mod menus;
 mod navigation;
+mod palette;
 mod preview;
 mod settings_window;
 mod watch;

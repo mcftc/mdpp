@@ -170,6 +170,41 @@ pub fn actions() -> impl Iterator<Item = &'static str> {
     })
 }
 
+/// A command as the palette lists it: its menu label, where it sits in the menus, its action.
+pub struct MenuCommand {
+    pub label: &'static str,
+    pub place: String,
+    pub action: &'static str,
+}
+
+/// Every menu command once (the first place it appears), in menu order — the palette's list.
+pub fn commands() -> Vec<MenuCommand> {
+    fn walk(items: &'static [ItemSpec], place: &str, out: &mut Vec<MenuCommand>) {
+        for item in items {
+            match item {
+                ItemSpec::Action { label, action, .. } => {
+                    if !out.iter().any(|c| c.action == action) {
+                        out.push(MenuCommand {
+                            label,
+                            place: place.to_string(),
+                            action,
+                        });
+                    }
+                }
+                ItemSpec::Submenu { submenu, items, .. } => {
+                    walk(items, &format!("{place} › {submenu}"), out)
+                }
+                ItemSpec::Separator { .. } => {}
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for menu in &SPEC.menu {
+        walk(&menu.items, &menu.name, &mut out);
+    }
+    out
+}
+
 fn name_problems() -> Vec<String> {
     all_items()
         .into_iter()
@@ -212,6 +247,15 @@ mod tests {
         let items = all_items();
         assert!(items.len() > 30 && names().count() >= 5);
         assert_eq!(name_problems(), Vec::<String>::new());
+        let commands = commands();
+        let bold = commands.iter().find(|c| c.label == "Bold").unwrap();
+        assert_eq!(bold.place, "Edit › Format");
+        let shortcuts = commands.iter().filter(|c| c.action == "mdpp::OpenKeymap");
+        assert_eq!(
+            shortcuts.count(),
+            1,
+            "listed once although two menus have it"
+        );
         for item in items {
             if let ItemSpec::Action { action, .. } = item {
                 assert!(action.contains("::"), "{action}: namespace::Action");

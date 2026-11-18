@@ -67,16 +67,28 @@ impl GoToLineBar {
             cx.notify();
             return;
         };
-        editor.update(cx, |state, cx| {
-            let last = state
-                .text()
-                .len_lines(ropey::LineType::LF)
-                .saturating_sub(1) as u32;
-            let position = Position::new((line - 1).min(last), column.map_or(0, |c| c - 1));
-            state.set_cursor_position(position, window, cx);
-        });
+        move_caret(editor, line, column, window, cx);
         cx.emit(CloseRequested);
     }
+}
+
+/// Put the caret on `line` (from 1; past the end: the last line), at `column` (from 1) or the
+/// start of the line. Shared by this bar and the palette's `:line`.
+pub fn move_caret(
+    editor: &Entity<EditorState>,
+    line: u32,
+    column: Option<u32>,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    editor.update(cx, |state, cx| {
+        let last = state
+            .text()
+            .len_lines(ropey::LineType::LF)
+            .saturating_sub(1) as u32;
+        let position = Position::new((line - 1).min(last), column.map_or(0, |c| c - 1));
+        state.set_cursor_position(position, window, cx);
+    });
 }
 
 impl Render for GoToLineBar {

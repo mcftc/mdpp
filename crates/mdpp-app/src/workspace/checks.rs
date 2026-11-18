@@ -296,6 +296,57 @@ impl Workspace {
         );
         press("alt-z", cx); // back as it was
 
+        // The palette, by keystrokes: a command, a line, a heading.
+        editor
+            .update_in(cx, |state, window, cx| {
+                state.replace_all("# Alpha\n\none\n# Beta\ntwo".to_string(), window, cx);
+                state.set_selected_range(0..0, cx);
+            })
+            .ok();
+        cx.background_executor().timer(bench::SETTLE).await; // headings come from the analysis
+        let wrap_before = this
+            .update(cx, |this, cx| this.active_document().read(cx).soft_wrap())
+            .unwrap_or_default();
+        let mut opened = true;
+        let mut run = |keys: &'static [&'static str], cx: &mut AsyncWindowContext| {
+            press(keys[0], cx);
+            opened &= this
+                .update(cx, |this, _| this.palette.is_some())
+                .unwrap_or(false);
+            for key in &keys[1..] {
+                press(key, cx);
+            }
+        };
+        run(&["ctrl-shift-p", "w", "r", "a", "p", "enter"], cx);
+        cx.background_executor()
+            .timer(bench::KEYSTROKE_INTERVAL)
+            .await;
+        let wrap_after = this
+            .update(cx, |this, cx| this.active_document().read(cx).soft_wrap())
+            .unwrap_or_default();
+        run(&["ctrl-p", ":", "2", "enter"], cx);
+        cx.background_executor()
+            .timer(bench::KEYSTROKE_INTERVAL)
+            .await;
+        let line = editor.read_with(cx, |state, _| state.cursor_position().line);
+        run(&["ctrl-p", "@", "b", "e", "enter"], cx);
+        cx.background_executor()
+            .timer(bench::KEYSTROKE_INTERVAL)
+            .await;
+        let heading_line = editor.read_with(cx, |state, _| state.cursor_position().line);
+        let closed = this
+            .update(cx, |this, _| this.palette.is_none())
+            .unwrap_or(false);
+        println!(
+            "BENCH check palette opened={opened} command_ran={} line={} heading={} closed={closed}",
+            wrap_before != wrap_after,
+            line == 1,
+            heading_line == 3
+        );
+        if wrap_before != wrap_after {
+            press("alt-z", cx);
+        }
+
         this.update_in(cx, |this, window, cx| {
             let doc = this.active_document().clone();
             doc.update(cx, |doc, _| doc.discard_backup());

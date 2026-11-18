@@ -21,6 +21,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Live preview beside the text with scroll sync, open by default — the eye at the right of the tab
   row turns it on and off; find/replace with regex
 - Reloads files changed by other programs; single instance (`mdpp file.md:line:col`)
+- Palette: Ctrl+Shift+P runs any command, Ctrl+P opens a file; in it `@` goes to a heading and
+  `:` to a line (fuzzy matching)
 - Settings window (Ctrl+,) like Zed's: search, categories, a described control per setting —
   it writes your `settings.toml`; settings and key bindings are TOML files, applied live
 
@@ -43,6 +45,7 @@ Try typing `](#`, `](`, `:roc`, ```` ``` ```` or `> [!` in a document.
 | Ctrl+G | go to line (`12` or `12:5`) | Alt+Z | word wrap |
 | Ctrl+= / Ctrl+- / Ctrl+0 | zoom in / out / reset | Ctrl+Alt+S | save all |
 | Ctrl+Shift+T | reopen closed tab | right-click a tab | close others / to the right / saved |
+| Ctrl+Shift+P | command palette | Ctrl+P | open a file (`@` heading, `:` line) |
 
 All bindings are in [`assets/default-keymap.toml`](assets/default-keymap.toml); settings and their
 defaults in [`assets/default-settings.toml`](assets/default-settings.toml); the menus in

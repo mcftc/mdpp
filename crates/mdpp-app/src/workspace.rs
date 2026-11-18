@@ -5,6 +5,7 @@
 
 mod checks;
 mod editing;
+mod palette;
 mod tabs;
 
 use std::collections::HashSet;
@@ -88,6 +89,9 @@ actions!(
         ZoomReset,
         ToggleWordWrap,
         ToggleMenuBar,
+        CommandPalette,
+        QuickOpen,
+        GoToHeading,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -226,6 +230,8 @@ pub struct Workspace {
     goto_bar: Entity<GoToLineBar>,
     show_goto: bool,
     show_outline: bool,
+    /// The palette, while it is open.
+    palette: Option<(Entity<crate::palette::Palette>, Subscription)>,
     /// The settings window, while it is open.
     settings_window: Option<(
         AnyWindowHandle,
@@ -306,6 +312,7 @@ impl Workspace {
             goto_bar,
             show_goto: false,
             show_outline: settings.outline_on_start,
+            palette: None,
             settings_window: None,
             zoom: 0,
             wrap: None,
@@ -1183,6 +1190,7 @@ impl Render for Workspace {
             editor.into_any_element()
         };
         v_flex()
+            .relative()
             .size_full()
             .key_context(DEFAULT_CONTEXT)
             .on_action(cx.listener(Self::save))
@@ -1210,6 +1218,9 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::zoom_reset))
             .on_action(cx.listener(Self::toggle_word_wrap))
             .on_action(cx.listener(Self::toggle_menu_bar))
+            .on_action(cx.listener(Self::command_palette))
+            .on_action(cx.listener(Self::quick_open))
+            .on_action(cx.listener(Self::go_to_heading))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
             .on_action(cx.listener(Self::close_other_tabs))
@@ -1253,6 +1264,7 @@ impl Render for Workspace {
             .child(div().flex_1().min_h_0().child(body))
             .child(self.render_status(cx))
             // Painted after the editor: marks "the frame is on its way" for the measurements.
+            .children(self.render_palette(cx))
             .child(canvas(|_, _, _| {}, move |_, _, _, _| probe.borrow_mut().painted()).size_0())
     }
 }

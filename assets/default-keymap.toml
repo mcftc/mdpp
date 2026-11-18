@@ -211,3 +211,11 @@ context = "MdEditor > Input"
 keys = "secondary-shift-["
 action = "mdpp::RemoveHeadingLevel"
 context = "MdEditor > Input"
+
+[[binding]]
+keys = "secondary-shift-p"
+action = "mdpp::CommandPalette"
+
+[[binding]]
+keys = "secondary-p"
+action = "mdpp::QuickOpen"
