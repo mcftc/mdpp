@@ -87,6 +87,7 @@ actions!(
         ZoomOut,
         ZoomReset,
         ToggleWordWrap,
+        ToggleMenuBar,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -225,8 +226,6 @@ pub struct Workspace {
     goto_bar: Entity<GoToLineBar>,
     show_goto: bool,
     show_outline: bool,
-    /// The menu bar beside ≡ is open.
-    show_menu_bar: bool,
     /// The settings window, while it is open.
     settings_window: Option<(
         AnyWindowHandle,
@@ -307,7 +306,6 @@ impl Workspace {
             goto_bar,
             show_goto: false,
             show_outline: settings.outline_on_start,
-            show_menu_bar: false,
             settings_window: None,
             zoom: 0,
             wrap: None,
@@ -562,6 +560,7 @@ impl Workspace {
             .and_then(|f| std::fs::read_to_string(f).ok())
             .unwrap_or_default();
         let loaded = Settings::load(&text);
+        let changed = loaded.settings != *self.settings;
         let settings = Rc::new(loaded.settings);
         crate::highlight::configure_language(&settings.auto_close_pairs, cx);
         for doc in &self.documents {
@@ -574,13 +573,17 @@ impl Workspace {
         });
         self.settings = settings;
         eprintln!("mdpp: settings reloaded");
-        // The settings window shows its own changes; a hand edit gets a notice.
+        // The settings window shows its own changes; a hand edit that changed something gets a
+        // notice (not the watcher's echo of a change made in MD++ itself).
         match &self.settings_window {
             Some((_, view)) => view.update(cx, |view, cx| {
                 view.reload();
                 cx.notify();
             }),
-            None => window.push_notification(Notification::info("Settings reloaded"), cx),
+            None if changed => {
+                window.push_notification(Notification::info("Settings reloaded"), cx)
+            }
+            None => {}
         }
         cx.notify();
         for warning in loaded.warnings {
@@ -1206,6 +1209,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::zoom_out))
             .on_action(cx.listener(Self::zoom_reset))
             .on_action(cx.listener(Self::toggle_word_wrap))
+            .on_action(cx.listener(Self::toggle_menu_bar))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
             .on_action(cx.listener(Self::close_other_tabs))
@@ -1237,7 +1241,9 @@ impl Render for Workspace {
                 this.open_paths(paths.paths().to_vec(), window, cx)
             }))
             .bg(cx.theme().background)
-            .when(self.show_menu_bar, |root| root.child(self.render_menu_bar(cx)))
+            .when(self.settings.menu_bar, |root| {
+                root.child(self.render_menu_bar(cx))
+            })
             .child(self.render_tabs(cx))
             .when_some(conflict, |root, conflict| {
                 root.child(self.render_conflict(conflict, cx))

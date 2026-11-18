@@ -2,7 +2,7 @@
 #
 # `action` is an action name as keymap.toml uses it; the shortcut shown beside an item is read
 # from the keymap, so it always matches. An item is one of:
-#   { label = "…", action = "namespace::Action" }   optional: check = "outline" | "preview" | "word_wrap"
+#   { label = "…", action = "namespace::Action" }   optional: check = "outline" | "preview" | "word_wrap" | "menu_bar"
 #   { submenu = "…", items = [ … ] }
 #   { submenu = "…", list = "recent" }              items filled by MD++ (recent files)
 #   { separator = true }
@@ -79,6 +79,7 @@ items = [
   { label = "Outline", action = "mdpp::ToggleOutline", check = "outline" },
   { label = "Preview", action = "mdpp::TogglePreview", check = "preview" },
   { label = "Word Wrap", action = "mdpp::ToggleWordWrap", check = "word_wrap" },
+  { label = "Menu Bar", action = "mdpp::ToggleMenuBar", check = "menu_bar" },
   { separator = true },
   { label = "Zoom In", action = "mdpp::ZoomIn" },
   { label = "Zoom Out", action = "mdpp::ZoomOut" },

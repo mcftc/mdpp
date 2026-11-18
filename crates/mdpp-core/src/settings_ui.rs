@@ -7,6 +7,7 @@
 //! only what differs. The settings watcher then applies it like a hand edit.
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::LazyLock;
 
 use serde::Deserialize;
@@ -231,6 +232,23 @@ pub fn write_value(user: &str, key: &str, value: &toml::Value) -> Result<String,
         table.insert(last, toml_edit::value(edit_value(value)?));
     }
     Ok(doc.to_string())
+}
+
+/// Writes one setting into the user's settings.toml at `path` — created, with its folder, when
+/// missing — and returns the file's new text. A file that exists but cannot be read is left alone.
+pub fn write_setting(path: &Path, key: &str, value: &toml::Value) -> Result<String, String> {
+    let user = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+        Err(error) => return Err(format!("Could not read {}: {error}", path.display())),
+    };
+    let text = write_value(&user, key, value)?;
+    if let Some(folder) = path.parent() {
+        std::fs::create_dir_all(folder).map_err(|error| error.to_string())?;
+    }
+    crate::file::save(path, text.as_bytes())
+        .map_err(|error| format!("Could not write {}: {error}", path.display()))?;
+    Ok(text)
 }
 
 fn edit_value(value: &toml::Value) -> Result<toml_edit::Value, String> {

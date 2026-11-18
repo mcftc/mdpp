@@ -16,7 +16,13 @@ const MENUS: &str = include_str!("../../../assets/menus.toml");
 pub const CHECK_OUTLINE: &str = "outline";
 pub const CHECK_PREVIEW: &str = "preview";
 pub const CHECK_WORD_WRAP: &str = "word_wrap";
-const CHECKS: [&str; 3] = [CHECK_OUTLINE, CHECK_PREVIEW, CHECK_WORD_WRAP];
+pub const CHECK_MENU_BAR: &str = "menu_bar";
+const CHECKS: [&str; 4] = [
+    CHECK_OUTLINE,
+    CHECK_PREVIEW,
+    CHECK_WORD_WRAP,
+    CHECK_MENU_BAR,
+];
 /// `list` names the app fills.
 pub const LIST_RECENT: &str = "recent";
 const LISTS: [&str; 1] = [LIST_RECENT];

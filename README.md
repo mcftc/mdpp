@@ -10,15 +10,16 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - Tabs (close others / to the right / saved, reopen closed), open/save/save all, recent files,
   drag-and-drop, encodings (UTF-8/16, legacy code pages, reopen/save with), line-ending conversion
 - Hot exit: quit any time; tabs and unsaved text come back next start (off: asks before closing)
-- ≡ opens a menu bar above the tabs (File · Edit · Selection · View · Go · Help) with every command and its
-  shortcut; go to line, zoom, word wrap, line commands
+- A menu bar above the tabs (File · Edit · Selection · View · Go · Help) with every command and
+  its shortcut — ≡ hides or shows it; go to line, zoom, word wrap, line commands
 - Markdown highlighting with coloured code blocks (~200 languages, theme colours), completions (anchors, paths, references, emoji, fences, alerts), diagnostics
   (missing headings and files, undefined or unused references, duplicate footnotes; each one's
   severity is a setting), go to definition and hover for links and footnotes
 - List continuation and Tab/Shift+Tab nesting, formatting toggles, heading levels, links (paste a
   URL over text), tasks, auto-closing brackets
 - Outline sidebar, word count and reading time, HTML export
-- Live preview with scroll sync; find/replace with regex
+- Live preview beside the text with scroll sync, open by default — the eye at the right of the tab
+  row turns it on and off; find/replace with regex
 - Reloads files changed by other programs; single instance (`mdpp file.md:line:col`)
 - Settings window (Ctrl+,) like Zed's: search, categories, a described control per setting —
   it writes your `settings.toml`; settings and key bindings are TOML files, applied live

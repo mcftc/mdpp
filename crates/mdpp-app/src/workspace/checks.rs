@@ -79,12 +79,13 @@ impl Workspace {
                     panic!("deliberate crash for the crash-report check");
                 }
                 bench::Mode::Typing(count, with_preview) => {
-                    if with_preview {
-                        this.update_in(cx, |_, window, cx| {
+                    // The preview opens by default: measure with it only when asked.
+                    this.update_in(cx, |this, window, cx| {
+                        if this.show_preview != with_preview {
                             window.dispatch_action(Box::new(TogglePreview), cx)
-                        })
-                        .ok();
-                    }
+                        }
+                    })
+                    .ok();
                     cx.background_executor().timer(bench::SETTLE).await;
                     editor
                         .update_in(cx, |state, window, cx| {
@@ -353,15 +354,26 @@ impl Workspace {
                 )
             })
             .unwrap_or_default();
-        // The menu bar row stays shown for the rest of the check, so every later frame draws it.
-        let shown = this
-            .update(cx, |this, cx| {
-                this.show_menu_bar = true;
-                cx.notify();
-                this.show_menu_bar
+        // ≡ hides the menu bar and keeps that in settings.toml; again, it is back and the line goes.
+        let toggled = this
+            .update_in(cx, |this, window, cx| {
+                let file = this.paths.as_ref().map(Paths::settings_file);
+                let read = || file.as_ref().and_then(|f| std::fs::read_to_string(f).ok());
+                let existed = file.as_ref().is_some_and(|f| f.exists());
+                let shown_at_start = this.settings.menu_bar;
+                this.toggle_menu_bar(&ToggleMenuBar, window, cx);
+                let hidden = !this.settings.menu_bar
+                    && read().is_some_and(|text| text.contains("menu_bar = false"));
+                this.toggle_menu_bar(&ToggleMenuBar, window, cx);
+                let back =
+                    this.settings.menu_bar && !read().unwrap_or_default().contains("menu_bar");
+                if let Some(file) = file.as_ref().filter(|_| !existed) {
+                    let _ = std::fs::remove_file(file); // the settings-file step needs it absent
+                }
+                format!("shown_at_start={shown_at_start} hidden_and_kept={hidden} back={back}")
             })
-            .unwrap_or(false);
-        println!("BENCH check menus {menus} menu_bar_shown={shown}");
+            .unwrap_or_default();
+        println!("BENCH check menus {menus} menu_bar {toggled}");
         let path = document.read_with(cx, |doc, _| doc.path().map(PathBuf::from));
         let before = path.as_ref().and_then(|p| std::fs::read(p).ok());
         editor
@@ -416,8 +428,11 @@ impl Workspace {
             );
             let _ = std::fs::remove_file(&export_path);
         }
-        this.update_in(cx, |_, window, cx| {
-            window.dispatch_action(Box::new(TogglePreview), cx)
+        // The preview opens by default; turn it on only when a session or setting left it off.
+        this.update_in(cx, |this, window, cx| {
+            if !this.show_preview {
+                window.dispatch_action(Box::new(TogglePreview), cx)
+            }
         })
         .ok();
         cx.background_executor().timer(bench::SETTLE).await;

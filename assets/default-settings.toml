@@ -36,6 +36,9 @@ recent_files_max = 10
 # Size of a new window, in logical pixels.
 window_width = 1100
 window_height = 720
+# Show the menu bar (File · Edit · Selection · …) above the tabs. ≡ in the tab row and
+# View → Menu Bar turn it on and off.
+menu_bar = true
 
 # Hot exit: never ask to save on quit. Unsaved changes (also in untitled tabs) are kept in
 # backups and the session — tabs, cursors, unsaved text — comes back next time.
@@ -53,8 +56,9 @@ outline_width = 240
 # Reading speed for the status bar's reading-time estimate (words per minute).
 reading_words_per_minute = 200
 
-# Show the preview when MD++ starts.
-preview_on_start = false
+# Show the preview beside the text when MD++ starts (the eye at the right end of the tab row
+# and Ctrl+Shift+V turn it on and off; an open session keeps its own choice).
+preview_on_start = true
 # Widest text column in the preview, in logical pixels.
 preview_max_width = 760
 # Load http(s) images in the preview. Off: MD++ makes no network requests unless you ask.

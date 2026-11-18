@@ -19,7 +19,7 @@ use gpui_kit::component::{ActiveTheme as _, Sizable as _, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
 use mdpp_core::settings::merged;
-use mdpp_core::settings_ui::{Control, Entry, PAGES, lookup, write_value};
+use mdpp_core::settings_ui::{Control, Entry, PAGES, lookup, write_setting};
 
 /// Something the main window does for this one: open the user's settings.toml ("Edit in
 /// settings.toml"), or apply a change at once (the config folder may not be watched yet).
@@ -81,16 +81,7 @@ impl SettingsWindow {
                     .push("No settings folder on this system: changes cannot be kept.".into());
                 return;
             };
-            let user = std::fs::read_to_string(path).unwrap_or_default();
-            let written = write_value(&user, key, &value).and_then(|text| {
-                if let Some(folder) = path.parent() {
-                    std::fs::create_dir_all(folder).map_err(|e| e.to_string())?;
-                }
-                mdpp_core::file::save(path, text.as_bytes())
-                    .map(|_| text)
-                    .map_err(|e| format!("Could not write {}: {e}", path.display()))
-            });
-            match written {
+            match write_setting(path, key, &value) {
                 Ok(text) => {
                     let (merged, found) = merged(&text);
                     *values.borrow_mut() = merged;

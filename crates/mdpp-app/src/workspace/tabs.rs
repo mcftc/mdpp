@@ -9,6 +9,10 @@ use gpui_kit::component::Selectable as _;
 use gpui_kit::component::menu::ContextMenuExt as _;
 
 use crate::menus;
+use mdpp_core::settings_ui::write_setting;
+
+/// The setting ≡ turns on and off.
+const MENU_BAR_SETTING: &str = "menu_bar";
 use crate::settings_window::{MainWindowCall, SettingsWindow};
 
 /// The settings window's size: room for the category list and a readable row of descriptions.
@@ -383,12 +387,56 @@ impl Workspace {
             .icon(IconName::Menu)
             .ghost()
             .small()
-            .tooltip("Menu")
-            .selected(self.show_menu_bar)
-            .on_click(cx.listener(|this, _, _, cx| {
-                this.show_menu_bar = !this.show_menu_bar;
+            .tooltip("Menu bar")
+            .selected(self.settings.menu_bar)
+            .on_click(
+                cx.listener(|this, _, window, cx| this.toggle_menu_bar(&ToggleMenuBar, window, cx)),
+            )
+    }
+
+    /// The eye at the right end of the tab row: the preview beside the text, on or off.
+    fn preview_toggle(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        Button::new("toggle-preview")
+            .icon(IconName::Eye)
+            .ghost()
+            .small()
+            .tooltip_with_action("Preview", &TogglePreview, Some(DEFAULT_CONTEXT))
+            .selected(self.show_preview)
+            .on_click(
+                cx.listener(|this, _, window, cx| this.toggle_preview(&TogglePreview, window, cx)),
+            )
+    }
+
+    /// The menu bar is a setting (`menu_bar`): ≡ and View → Menu Bar write it into the user's
+    /// settings.toml, so the choice is kept and the settings window shows it.
+    pub(super) fn toggle_menu_bar(
+        &mut self,
+        _: &ToggleMenuBar,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let shown = !self.settings.menu_bar;
+        let written = match self.paths.as_ref().map(Paths::settings_file) {
+            Some(path) => write_setting(&path, MENU_BAR_SETTING, &toml::Value::Boolean(shown)),
+            None => {
+                Err("No settings folder on this system: the menu bar comes back next time.".into())
+            }
+        };
+        if let Err(problem) = written {
+            window.push_notification(Notification::warning(problem), cx);
+        }
+        self.settings = Rc::new(Settings {
+            menu_bar: shown,
+            ..(*self.settings).clone()
+        });
+        self.refresh_watches(cx); // the config folder may have just been created
+        if let Some((_, view)) = &self.settings_window {
+            view.update(cx, |view, cx| {
+                view.reload();
                 cx.notify();
-            }))
+            });
+        }
+        cx.notify();
     }
 
     /// The menu bar (File · Edit · …) as in Zed: short menus instead of one long list, in a row
@@ -423,6 +471,7 @@ impl Workspace {
             (menus::CHECK_OUTLINE, self.show_outline),
             (menus::CHECK_PREVIEW, self.show_preview),
             (menus::CHECK_WORD_WRAP, wrap),
+            (menus::CHECK_MENU_BAR, self.settings.menu_bar),
         ]
         .into_iter()
         .filter_map(|(name, on)| on.then_some(name))
@@ -513,6 +562,7 @@ impl Workspace {
             .collect();
         TabBar::new("documents")
             .prefix(div().px_1().child(self.menu_toggle(cx)))
+            .suffix(div().px_1().child(self.preview_toggle(cx)))
             .selected_index(self.active)
             .on_click(
                 cx.listener(|this, index: &usize, window, cx| this.activate(*index, window, cx)),

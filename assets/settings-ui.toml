@@ -48,7 +48,7 @@ title = "Window & Layout"
 
 [[page.group]]
 title = "Window"
-settings = ["window_width", "window_height"]
+settings = ["window_width", "window_height", "menu_bar"]
 
 [[page.group]]
 title = "Outline"
