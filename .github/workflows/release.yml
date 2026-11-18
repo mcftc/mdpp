@@ -7,12 +7,19 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Run by hand for an existing tag (e.g. to add the Windows archive to a release made locally).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build, e.g. v0.1.0"
+        required: true
 
 permissions:
   contents: write
 
 env:
   CARGO_TERM_COLOR: always
+  TAG: ${{ inputs.tag || github.ref_name }}
   LINUX_GUI_DEPS: libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libfontconfig-dev libfreetype-dev libvulkan-dev libx11-xcb-dev
 
 jobs:
@@ -20,6 +27,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: sudo apt-get update && sudo apt-get install -y $LINUX_GUI_DEPS
       - run: packaging/linux/package.sh
@@ -32,6 +41,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo build --locked --profile dist -p mdpp-app
       - name: Archive
@@ -61,8 +72,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         # A release made by hand (packaging/linux/package.sh) gets the missing archives added.
         run: |
-          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "MD++ $GITHUB_REF_NAME" --generate-notes
+            gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --title "MD++ $TAG" --generate-notes
           fi
