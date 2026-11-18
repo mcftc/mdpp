@@ -146,6 +146,11 @@ fn find(text: &Rope, offset: usize) -> Option<Table> {
     })
 }
 
+/// How many cells a table row has as written (indentation and `>` markers ignored).
+pub(crate) fn cell_count(line: &str) -> usize {
+    split_cells(&line[lead_of(line).len()..]).len()
+}
+
 /// Indentation and blockquote markers at the start of a row.
 fn lead_of(line: &str) -> String {
     let end = line

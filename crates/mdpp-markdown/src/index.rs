@@ -44,6 +44,8 @@ pub struct Link {
     pub label: Option<String>,
     /// Range of the whole link in the source.
     pub range: Range<usize>,
+    /// The link's text, or an image's alt text, without markup.
+    pub text: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -78,6 +80,8 @@ pub struct DocIndex {
     pub footnotes: Vec<Footnote>,
     /// Footnote references (`[^label]` in text).
     pub footnote_references: Vec<Footnote>,
+    /// Source ranges of GFM tables.
+    pub tables: Vec<Range<usize>>,
 }
 
 impl DocIndex {
@@ -104,6 +108,8 @@ impl DocIndex {
         let mut index = DocIndex::default();
         let mut slugs = SlugCounter::default();
         let mut open_heading: Option<(u8, Option<String>, Range<usize>, String)> = None;
+        // Links and images being read (nested: an image inside a link), by index in `links`.
+        let mut open_links: Vec<usize> = Vec::new();
 
         for (event, range) in events.by_ref() {
             match event {
@@ -119,7 +125,14 @@ impl DocIndex {
                     if let Some((_, _, _, heading_text)) = open_heading.as_mut() {
                         heading_text.push_str(&text);
                     }
+                    for &link in &open_links {
+                        index.links[link].text.push_str(&text);
+                    }
                 }
+                Event::End(TagEnd::Link | TagEnd::Image) => {
+                    open_links.pop();
+                }
+                Event::Start(Tag::Table(_)) => index.tables.push(range),
                 Event::End(TagEnd::Heading(_)) => {
                     if let Some((level, id, range, text)) = open_heading.take() {
                         let anchor = slugs.unique(id.unwrap_or_else(|| github_slug(&text)));
@@ -143,19 +156,23 @@ impl DocIndex {
                         LinkType::WikiLink { .. } => LinkKind::Wiki,
                         _ => LinkKind::Reference,
                     };
+                    open_links.push(index.links.len());
                     index.links.push(Link {
                         kind,
                         dest: dest_url.to_string(),
                         label: (!id.is_empty()).then(|| id.to_string()),
                         range,
+                        text: String::new(),
                     });
                 }
                 Event::Start(Tag::Image { dest_url, id, .. }) => {
+                    open_links.push(index.links.len());
                     index.links.push(Link {
                         kind: LinkKind::Image,
                         dest: dest_url.to_string(),
                         label: (!id.is_empty()).then(|| id.to_string()),
                         range,
+                        text: String::new(),
                     });
                 }
                 Event::Start(Tag::FootnoteDefinition(label)) => index.footnotes.push(Footnote {

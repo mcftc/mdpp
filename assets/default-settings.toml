@@ -85,3 +85,13 @@ undefined-reference = "warning"
 unused-definition = "hint"
 # A second [^note]: definition of the same footnote (the first one wins).
 duplicate-footnote = "warning"
+# A heading more than one level below the one before it (## then ####).
+heading-increment = "info"
+# Two headings with the same text under the same parent heading.
+duplicate-heading = "hint"
+# A table row with more or fewer cells than the header row.
+table-columns = "warning"
+# A link or image with an empty destination: [text]().
+empty-link = "warning"
+# An image without alt text: ![](picture.png).
+missing-alt = "hint"

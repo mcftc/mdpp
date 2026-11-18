@@ -779,7 +779,8 @@ impl Document {
                     let source = text.to_string();
                     let words = mdpp_markdown::word_count(&source);
                     let index = DocIndex::build(&source);
-                    let found = mdpp_lang::diagnose(&index, doc_dir.as_deref(), &FileSystem);
+                    let found =
+                        mdpp_lang::diagnose(&source, &index, doc_dir.as_deref(), &FileSystem);
                     let blocks = with_preview.then(|| Arc::new(blocks::parse(&source)));
                     (text, Arc::new(index), found, blocks, doc_dir, words)
                 })
