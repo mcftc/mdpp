@@ -16,7 +16,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
   (missing headings and files, undefined or unused references, duplicate footnotes; each one's
   severity is a setting), go to definition and hover for links and footnotes
 - List continuation and Tab/Shift+Tab nesting, formatting toggles, heading levels, links (paste a
-  URL over text), tasks, auto-closing brackets
+  URL over text), tasks, auto-closing brackets; tables: Tab/Shift+Tab between cells (aligns the
+  columns), Enter adds a row
 - Outline sidebar, word count and reading time, HTML export
 - Live preview beside the text with scroll sync, open by default — the eye at the right of the tab
   row turns it on and off; find/replace with regex

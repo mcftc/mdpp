@@ -9,7 +9,7 @@ use std::ops::{Range, RangeInclusive};
 use gpui_kit::component::input::{self, Rope};
 use gpui_kit::*;
 use mdpp_lang::assist::{self, Edit};
-use mdpp_lang::lines;
+use mdpp_lang::{lines, table};
 
 use super::*;
 
@@ -78,7 +78,10 @@ impl Workspace {
             |text, selection| {
                 selection
                     .is_empty()
-                    .then(|| assist::on_enter(text, selection.start))
+                    .then(|| {
+                        table::on_enter(text, selection.start)
+                            .or_else(|| assist::on_enter(text, selection.start))
+                    })
                     .flatten()
             },
             Box::new(enter),
@@ -87,10 +90,14 @@ impl Workspace {
         );
     }
 
-    /// Tab on a list item nests it; anywhere else the editor indents as usual.
+    /// Tab in a table moves to the next cell; on a list item it nests the item; anywhere else
+    /// the editor indents as usual.
     pub(super) fn smart_tab(&mut self, _: &SmartTab, window: &mut Window, cx: &mut Context<Self>) {
         self.assist_or(
-            |text, selection| assist::indent_list(text, selection, false),
+            |text, selection| {
+                table::on_tab(text, selection.clone(), false)
+                    .or_else(|| assist::indent_list(text, selection, false))
+            },
             Box::new(input::IndentInline),
             window,
             cx,
@@ -104,11 +111,27 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         self.assist_or(
-            |text, selection| assist::indent_list(text, selection, true),
+            |text, selection| {
+                table::on_tab(text, selection.clone(), true)
+                    .or_else(|| assist::indent_list(text, selection, true))
+            },
             Box::new(input::OutdentInline),
             window,
             cx,
         );
+    }
+
+    /// Align the columns of the table at the caret (Edit → Format → Format Table).
+    pub(super) fn format_table(
+        &mut self,
+        _: &FormatTable,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let state = self.active_document().read(cx).editor().read(cx);
+        if let Some(edit) = table::format(state.text(), state.cursor()) {
+            self.apply_edit(edit, window, cx);
+        }
     }
 
     /// Paste: a URL pasted over selected text becomes a link; anything else pastes normally.

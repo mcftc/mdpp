@@ -3753,6 +3753,7 @@ dependencies = [
  "emojis",
  "mdpp-markdown",
  "ropey",
+ "unicode-width",
 ]
 
 [[package]]

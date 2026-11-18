@@ -12,6 +12,7 @@ publish = false
 mdpp-markdown.workspace = true
 ropey.workspace = true
 emojis.workspace = true
+unicode-width.workspace = true
 
 [lints]
 workspace = true

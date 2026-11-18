@@ -98,6 +98,7 @@ actions!(
         CloseFolder,
         ToggleFolderPanel,
         FindInFiles,
+        FormatTable,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -1290,6 +1291,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::close_folder))
             .on_action(cx.listener(Self::toggle_folder_panel))
             .on_action(cx.listener(Self::find_in_files))
+            .on_action(cx.listener(Self::format_table))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
             .on_action(cx.listener(Self::close_other_tabs))

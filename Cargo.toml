@@ -36,6 +36,8 @@ chardetng = "1"
 interprocess = "2"
 # Lists an opened folder honouring .gitignore (already built: gpui-component's i18n macro uses it).
 ignore = "0.4"
+# Column widths of aligned tables (East Asian wide characters); already built for the UI.
+unicode-width = "0.2"
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 smol = "2"
 # Fenced-code highlighting (PLAN D5): the parser and bat's ~200 syntaxes, pure-Rust regex — the

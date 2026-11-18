@@ -15,6 +15,7 @@ mod diagnostics;
 pub mod lines;
 pub mod navigate;
 mod paths;
+pub mod table;
 
 pub use complete::{Completion, CompletionKind, Context, ContextKind, candidates, context_at};
 pub use diagnostics::{Diagnostic, RULES, diagnose};

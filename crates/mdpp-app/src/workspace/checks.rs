@@ -225,7 +225,20 @@ impl Workspace {
         );
 
         // Each step: set the text and caret, press keys, compare the text.
-        let steps: [(&str, usize, &[&str], &str); 5] = [
+        let steps: [(&str, usize, &[&str], &str); 7] = [
+            // Tables: Tab aligns and moves on (typing replaces the selected cell); Enter adds a row.
+            (
+                "| a | b |\n|---|---|\n| 1 | 2 |",
+                23,
+                &["tab", "x"],
+                "| a   | b   |\n| --- | --- |\n| 1   | x   |",
+            ),
+            (
+                "| a | b |\n|---|---|\n| 1 | 2 |",
+                29,
+                &["enter", "z"],
+                "| a   | b   |\n| --- | --- |\n| 1   | 2   |\n| z    |     |", // aligned on the next Tab
+            ),
             ("- a\n- b", 7, &["tab"], "- a\n  - b"),
             ("- a\n  - b", 9, &["shift-tab"], "- a\n- b"),
             ("Title", 5, &["ctrl-shift-]", "ctrl-shift-]"], "## Title"),
