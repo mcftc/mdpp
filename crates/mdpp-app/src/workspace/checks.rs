@@ -225,7 +225,30 @@ impl Workspace {
         );
 
         // Each step: set the text and caret, press keys, compare the text.
-        let steps: [(&str, usize, &[&str], &str); 9] = [
+        let steps: [(&str, usize, &[&str], &str); 10] = [
+            // A snippet from the palette: the caret lands on its `$0`.
+            (
+                "",
+                0,
+                &[
+                    "ctrl-shift-p",
+                    "s",
+                    "n",
+                    "i",
+                    "p",
+                    "p",
+                    "e",
+                    "t",
+                    "t",
+                    "a",
+                    "b",
+                    "l",
+                    "e",
+                    "enter",
+                    "x",
+                ],
+                "| x | Column |\n| --- | --- |\n|  |  |\n",
+            ),
             // Ctrl+. offers code actions; the first one away from links: a table of contents.
             (
                 "## A\n## B",

@@ -18,6 +18,7 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
 - List continuation and Tab/Shift+Tab nesting, formatting toggles, heading levels, links (paste a
   URL over text), tasks, auto-closing brackets; tables: Tab/Shift+Tab between cells (aligns the
   columns), Enter adds a row
+- Snippets (table, code block, details, front matter …) from Edit → Insert Snippet or the palette
 - Ctrl+. code actions: create a missing linked file, insert/update a table of contents, convert
   a link to a reference link
 - F2 renames a heading and the links to it; Shift+F12 finds links to a heading

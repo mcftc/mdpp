@@ -3,7 +3,7 @@
 //!
 //! | typed     | lists                                                        |
 //! |-----------|--------------------------------------------------------------|
-//! | `>`       | every menu command, with its shortcut (Ctrl+Shift+P opens here) |
+//! | `>`       | every menu command with its shortcut, and the snippets (Ctrl+Shift+P) |
 //! | `@`       | the headings of the document                                 |
 //! | `:`       | go to `line` or `line:column`                                |
 //! | otherwise | open tabs, recent files, the opened folder's files (Ctrl+P)  |
@@ -38,6 +38,8 @@ const MAX_ROWS: usize = 200;
 pub enum Choice {
     /// A menu command, by action name.
     Command(&'static str),
+    /// Insert a snippet, by name.
+    Snippet(&'static str),
     Open(PathBuf),
     /// A byte offset in the active document (a heading).
     Jump(usize),
@@ -60,7 +62,8 @@ struct Row {
 
 /// What the palette searches, gathered when it opens.
 pub struct Sources {
-    pub commands: Vec<(SharedString, SharedString, &'static str)>,
+    /// Label, where it is in the menus, what it does (a command or a snippet).
+    pub commands: Vec<(SharedString, SharedString, Choice)>,
     pub files: Vec<PathBuf>,
     /// The opened folder: its files are shown relative to it.
     pub root: Option<PathBuf>,
@@ -112,12 +115,15 @@ impl Palette {
             fuzzy::rank(text, names.iter().map(String::as_str))
                 .into_iter()
                 .map(|i| {
-                    let (label, place, action) = &sources.commands[i];
+                    let (label, place, choice) = &sources.commands[i];
                     Row {
                         label: label.clone(),
                         detail: place.clone(),
-                        choice: Choice::Command(action),
-                        action: cx.build_action(action, None).ok(),
+                        choice: choice.clone(),
+                        action: match choice {
+                            Choice::Command(action) => cx.build_action(action, None).ok(),
+                            _ => None,
+                        },
                     }
                 })
                 .collect()

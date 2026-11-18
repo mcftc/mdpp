@@ -35,9 +35,18 @@ impl Workspace {
             }
         }
         files.extend(active);
+        let snippets = crate::snippets::all().iter().map(|s| {
+            let label = format!("Insert Snippet: {}", s.name).into();
+            (
+                label,
+                "Edit › Insert Snippet".into(),
+                Choice::Snippet(s.name.as_str()),
+            )
+        });
         let commands = menus::commands()
             .into_iter()
-            .map(|c| (c.label.into(), c.place.into(), c.action))
+            .map(|c| (c.label.into(), c.place.into(), Choice::Command(c.action)))
+            .chain(snippets)
             .collect();
         let sources = Sources {
             commands,
@@ -78,6 +87,13 @@ impl Workspace {
                 Ok(action) => window.dispatch_action(action, cx),
                 Err(error) => eprintln!("mdpp: palette: {name}: {error}"),
             },
+            Choice::Snippet(name) => self.insert_snippet(
+                &InsertSnippet {
+                    name: name.to_string(),
+                },
+                window,
+                cx,
+            ),
             Choice::Open(path) => self.open_paths(vec![path], window, cx),
             Choice::Jump(offset) => self.jump_to(offset, window, cx),
             Choice::Line(line, column) => {

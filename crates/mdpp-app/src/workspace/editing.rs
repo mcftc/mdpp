@@ -195,6 +195,38 @@ impl Workspace {
         );
     }
 
+    /// Insert a snippet over the selection; one that does not start a line gets a line break
+    /// before it, since snippets are blocks.
+    pub(super) fn insert_snippet(
+        &mut self,
+        action: &InsertSnippet,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(snippet) = crate::snippets::find(&action.name) else {
+            return;
+        };
+        let (body, caret) = snippet.expand();
+        let state = self.active_document().read(cx).editor().read(cx);
+        let range = state.selected_range();
+        let text = state.text();
+        let line_start = text.line_to_byte_idx(
+            text.byte_to_line_idx(range.start, ropey::LineType::LF),
+            ropey::LineType::LF,
+        );
+        let lead = if range.start == line_start { "" } else { "\n" };
+        let at = range.start + lead.len() + caret;
+        self.apply_edit(
+            Edit {
+                range,
+                text: format!("{lead}{body}"),
+                select: at..at,
+            },
+            window,
+            cx,
+        );
+    }
+
     /// Align the columns of the table at the caret (Edit → Format → Format Table).
     pub(super) fn format_table(
         &mut self,

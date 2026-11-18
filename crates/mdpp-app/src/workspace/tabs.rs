@@ -498,9 +498,21 @@ impl Workspace {
                 (recent_label(path), action)
             })
             .collect();
+        let snippets = crate::snippets::all()
+            .iter()
+            .map(|s| {
+                let action: Box<dyn Action> = Box::new(InsertSnippet {
+                    name: s.name.clone(),
+                });
+                (s.name.clone(), action)
+            })
+            .collect();
         menus::MenuState {
             checked,
-            lists: HashMap::from([(menus::LIST_RECENT, recent)]),
+            lists: HashMap::from([
+                (menus::LIST_RECENT, recent),
+                (menus::LIST_SNIPPETS, snippets),
+            ]),
         }
     }
 

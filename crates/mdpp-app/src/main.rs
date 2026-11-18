@@ -18,6 +18,7 @@ mod preview;
 mod prompt;
 mod search_panel;
 mod settings_window;
+mod snippets;
 mod watch;
 mod workspace;
 

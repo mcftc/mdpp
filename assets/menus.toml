@@ -4,7 +4,7 @@
 # from the keymap, so it always matches. An item is one of:
 #   { label = "…", action = "namespace::Action" }   optional: check = "folder" | "outline" | "preview" | "word_wrap" | "menu_bar"
 #   { submenu = "…", items = [ … ] }
-#   { submenu = "…", list = "recent" }              items filled by MD++ (recent files)
+#   { submenu = "…", list = "recent" | "snippets" } items filled by MD++ (recent files, snippets)
 #   { separator = true }
 
 [[menu]]
@@ -49,6 +49,7 @@ items = [
   { label = "Find Previous", action = "mdpp::FindPrevious" },
   { label = "Find in Files", action = "mdpp::FindInFiles" },
   { separator = true },
+  { submenu = "Insert Snippet", list = "snippets" },
   { submenu = "Format", items = [
     { label = "Bold", action = "mdpp::ToggleBold" },
     { label = "Italic", action = "mdpp::ToggleItalic" },

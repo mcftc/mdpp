@@ -27,7 +27,8 @@ const CHECKS: [&str; 5] = [
 ];
 /// `list` names the app fills.
 pub const LIST_RECENT: &str = "recent";
-const LISTS: [&str; 1] = [LIST_RECENT];
+pub const LIST_SNIPPETS: &str = "snippets";
+const LISTS: [&str; 2] = [LIST_RECENT, LIST_SNIPPETS];
 
 #[derive(Debug, Deserialize)]
 struct MenuFile {

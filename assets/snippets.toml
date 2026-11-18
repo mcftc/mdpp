@@ -1,0 +1,61 @@
+# Snippets: Edit → Insert Snippet and the command palette (Ctrl+Shift+P, "snippet").
+# Adding one is an entry here. `$0` marks where the caret goes (at most once; the end without).
+
+[[snippet]]
+name = "Table"
+body = """
+| $0 | Column |
+| --- | --- |
+|  |  |
+"""
+
+[[snippet]]
+name = "Code block"
+body = """
+```$0
+```
+"""
+
+[[snippet]]
+name = "Task list"
+body = """
+- [ ] $0
+- [ ] 
+"""
+
+[[snippet]]
+name = "Collapsible section"
+body = """
+<details>
+<summary>$0</summary>
+
+</details>
+"""
+
+[[snippet]]
+name = "Note"
+body = """
+> [!NOTE]
+> $0
+"""
+
+[[snippet]]
+name = "Footnote"
+body = "[^1]\n\n[^1]: $0"
+
+[[snippet]]
+name = "Front matter"
+body = """
+---
+title: $0
+date: 
+---
+"""
+
+[[snippet]]
+name = "Math block"
+body = """
+$$
+$0
+$$
+"""

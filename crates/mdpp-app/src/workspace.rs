@@ -120,6 +120,13 @@ pub struct OpenRecent {
     pub path: PathBuf,
 }
 
+/// Edit → Insert Snippet: a snippet from `assets/snippets.toml`, by name.
+#[derive(Action, Clone, PartialEq, serde::Deserialize)]
+#[action(namespace = mdpp, no_json)]
+pub struct InsertSnippet {
+    pub name: String,
+}
+
 /// Status-bar line-ending menu: convert the document (applied on the next save).
 #[derive(Action, Clone, PartialEq, serde::Deserialize)]
 #[action(namespace = mdpp, no_json)]
@@ -1295,6 +1302,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::find_in_files))
             .on_action(cx.listener(Self::format_table))
             .on_action(cx.listener(Self::rename_heading))
+            .on_action(cx.listener(Self::insert_snippet))
             .on_action(cx.listener(Self::find_references))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
