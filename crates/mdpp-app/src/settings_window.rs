@@ -18,6 +18,7 @@ use gpui_kit::component::setting::{
 use gpui_kit::component::{ActiveTheme as _, Sizable as _, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
+use mdpp_core::i18n::t;
 use mdpp_core::settings::merged;
 use mdpp_core::settings_ui::{Control, Entry, PAGES, lookup, write_setting};
 
@@ -118,12 +119,13 @@ impl SettingsWindow {
             let key = key.clone();
             move |value: toml::Value| write(&key, value)
         };
+        let title = t(&entry.title).to_string();
         let item = match &entry.control {
             Control::Switch => {
                 let on_change = on_change.clone();
                 let default = entry.default.as_bool().unwrap_or_default();
                 SettingItem::new(
-                    entry.title.clone(),
+                    title.clone(),
                     SettingField::switch(
                         move |_| current().as_bool().unwrap_or_default(),
                         move |on, cx| {
@@ -139,7 +141,7 @@ impl SettingsWindow {
                 let integer = entry.default.is_integer();
                 let default = number(&entry.default);
                 SettingItem::new(
-                    entry.title.clone(),
+                    title.clone(),
                     SettingField::number_input(
                         NumberFieldOptions {
                             min: *min,
@@ -167,7 +169,7 @@ impl SettingsWindow {
                     .collect();
                 let default = text(&entry.default);
                 SettingItem::new(
-                    entry.title.clone(),
+                    title.clone(),
                     SettingField::dropdown(
                         options,
                         move |_| text(&current()).into(),
@@ -184,7 +186,7 @@ impl SettingsWindow {
                 let list = entry.default.is_array();
                 let default = text(&entry.default);
                 SettingItem::new(
-                    entry.title.clone(),
+                    title.clone(),
                     SettingField::input(
                         move |_| text(&current()).into(),
                         move |typed: SharedString, cx| {
@@ -205,8 +207,9 @@ impl SettingsWindow {
                 )
             }
         };
-        item.description(entry.description.clone())
-            .keywords([entry.key.clone()])
+        // Searchable by the key and the English title too, whatever the UI language.
+        item.description(t(&entry.description).to_string())
+            .keywords([entry.key.clone(), entry.title.clone()])
     }
 }
 
@@ -237,18 +240,18 @@ impl Render for SettingsWindow {
         let edit_file = self.edit_file.clone();
         let pages = PAGES.iter().map(|page| {
             let edit_file = edit_file.clone();
-            SettingPage::new(page.title.clone())
+            SettingPage::new(t(&page.title).to_string())
                 .title_suffix(move |_, _| {
                     let edit_file = edit_file.clone();
                     Button::new("edit-settings-file")
-                        .label("Edit in settings.toml")
+                        .label(t("Edit in settings.toml"))
                         .outline()
                         .small()
                         .on_click(move |_, _, cx| edit_file(cx))
                 })
                 .groups(page.groups.iter().map(|group| {
                     SettingGroup::new()
-                        .title(group.title.clone())
+                        .title(t(&group.title).to_string())
                         .items(group.entries.iter().map(|entry| self.item(entry)))
                 }))
         });

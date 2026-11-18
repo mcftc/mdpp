@@ -4,6 +4,7 @@ use crate::menus;
 use crate::palette::{COMMANDS_PREFIX, Choice, Palette, PaletteEvent, Sources};
 
 use super::*;
+use mdpp_core::i18n::{t, tf};
 
 impl Workspace {
     fn open_palette(&mut self, query: &str, window: &mut Window, cx: &mut Context<Self>) {
@@ -35,17 +36,33 @@ impl Workspace {
             }
         }
         files.extend(active);
+        // Shown in the UI language; the menu path is translated part by part.
+        let place = |path: &str| -> SharedString {
+            path.split(" › ")
+                .map(t)
+                .collect::<Vec<_>>()
+                .join(" › ")
+                .into()
+        };
         let snippets = crate::snippets::all().iter().map(|s| {
-            let label = format!("Insert Snippet: {}", s.name).into();
+            let label = tf("Insert Snippet: {name}", &[("name", &t(&s.name))]).into();
             (
                 label,
-                "Edit › Insert Snippet".into(),
+                place("Edit › Insert Snippet"),
                 Choice::Snippet(s.name.as_str()),
+                format!("Insert Snippet {}", s.name),
             )
         });
         let commands = menus::commands()
             .into_iter()
-            .map(|c| (c.label.into(), c.place.into(), Choice::Command(c.action)))
+            .map(|c| {
+                (
+                    t(c.label).to_string().into(),
+                    place(&c.place),
+                    Choice::Command(c.action),
+                    c.label.to_string(),
+                )
+            })
             .chain(snippets)
             .collect();
         let sources = Sources {

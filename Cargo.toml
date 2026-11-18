@@ -44,6 +44,8 @@ ratex-parser = "0.1.16"
 ratex-layout = "0.1.16"
 ratex-types = "0.1.16"
 ratex-svg = { version = "0.1.16", features = ["embed-fonts"] }
+# The system language for `language = "auto"` (already built: cosmic-text uses it).
+sys-locale = "0.3"
 notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
 smol = "2"
 # Fenced-code highlighting (PLAN D5): the parser and bat's ~200 syntaxes, pure-Rust regex — the

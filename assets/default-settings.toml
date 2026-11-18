@@ -45,6 +45,8 @@ search_max_file_bytes = 4194304
 # Size of a new window, in logical pixels.
 window_width = 1100
 window_height = 720
+# Language of menus, dialogs and settings: auto (the system's), en or tr. Applies at the next start.
+language = "auto"
 # Focus mode (F11): full screen, the text alone in a column this wide (logical pixels).
 focus_mode_width = 760
 # Show the menu bar (File · Edit · Selection · …) above the tabs. ≡ in the tab row and

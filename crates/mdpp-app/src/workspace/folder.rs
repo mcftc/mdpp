@@ -10,6 +10,7 @@ use std::sync::Arc;
 use mdpp_core::folder::{self, Listing, Tree};
 
 use super::*;
+use mdpp_core::i18n::{t, tf};
 
 /// Indentation of one tree level and the panel's padding, in logical pixels.
 const TREE_INDENT: f32 = 12.0;
@@ -163,7 +164,7 @@ impl Workspace {
         };
         let tab = |id: &'static str, label: &'static str, side: Side| {
             Button::new(id)
-                .label(label)
+                .label(t(label))
                 .ghost()
                 .xsmall()
                 .selected(self.side == side)
@@ -192,7 +193,7 @@ impl Workspace {
                     .icon(IconName::Close)
                     .ghost()
                     .xsmall()
-                    .tooltip("Close the panel")
+                    .tooltip(t("Close the panel"))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.show_side = false;
                         cx.notify();
@@ -253,7 +254,7 @@ impl Workspace {
                     div()
                         .text_xs()
                         .text_color(theme.warning)
-                        .child(format!("first {}", open.listing.files.len())),
+                        .child(tf("first {count}", &[("count", &open.listing.files.len())])),
                 )
             })
             .child(
@@ -261,7 +262,7 @@ impl Workspace {
                     .icon(IconName::RefreshCw)
                     .ghost()
                     .xsmall()
-                    .tooltip("List the folder again")
+                    .tooltip(t("List the folder again"))
                     .on_click(cx.listener(|this, _, _, cx| this.scan_folder(cx))),
             );
         let list = uniform_list(

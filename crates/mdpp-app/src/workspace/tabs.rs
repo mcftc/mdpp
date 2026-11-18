@@ -19,6 +19,7 @@ use crate::settings_window::{MainWindowCall, SettingsWindow};
 const SETTINGS_WINDOW_SIZE: (f32, f32) = (900.0, 640.0);
 
 use super::*;
+use mdpp_core::i18n::{t, tf};
 
 impl Workspace {
     /// Ask Save / Don't Save / Cancel when `document` has unsaved changes. Resolves to whether it
@@ -38,9 +39,9 @@ impl Workspace {
         let name = document.read(cx).name();
         let answer = window.prompt(
             PromptLevel::Warning,
-            &format!("Save changes to {name}?"),
-            Some("Your changes will be lost if you close without saving."),
-            &["Save", "Don't Save", "Cancel"],
+            &tf("Save changes to {name}?", &[("name", &name)]),
+            Some(t("Your changes will be lost if you close without saving.")),
+            &[t("Save"), t("Don't Save"), t("Cancel")],
             cx,
         );
         cx.spawn_in(window, async move |_, cx| match answer.await {
@@ -387,7 +388,7 @@ impl Workspace {
             .icon(IconName::Menu)
             .ghost()
             .small()
-            .tooltip("Menu bar")
+            .tooltip(t("Menu bar"))
             .selected(self.settings.menu_bar)
             .on_click(
                 cx.listener(|this, _, window, cx| this.toggle_menu_bar(&ToggleMenuBar, window, cx)),
@@ -400,7 +401,7 @@ impl Workspace {
             .icon(IconName::PanelLeft)
             .ghost()
             .small()
-            .tooltip("Folder")
+            .tooltip(t("Folder"))
             .selected(self.show_side && self.folder.is_some())
             .on_click(cx.listener(|this, _, window, cx| {
                 this.toggle_folder_panel(&ToggleFolderPanel, window, cx)
@@ -413,7 +414,7 @@ impl Workspace {
             .icon(IconName::Eye)
             .ghost()
             .small()
-            .tooltip_with_action("Preview", &TogglePreview, Some(DEFAULT_CONTEXT))
+            .tooltip_with_action(t("Preview"), &TogglePreview, Some(DEFAULT_CONTEXT))
             .selected(self.show_preview)
             .on_click(
                 cx.listener(|this, _, window, cx| this.toggle_preview(&TogglePreview, window, cx)),
@@ -467,7 +468,7 @@ impl Workspace {
             .children(menus::names().enumerate().map(|(index, name)| {
                 let (state, focus) = (state.clone(), focus.clone());
                 Button::new(("menu-bar", index))
-                    .label(name)
+                    .label(t(name))
                     .ghost()
                     .small()
                     .dropdown_menu(move |menu, window, cx| {
@@ -505,7 +506,7 @@ impl Workspace {
                 let action: Box<dyn Action> = Box::new(InsertSnippet {
                     name: s.name.clone(),
                 });
-                (s.name.clone(), action)
+                (t(&s.name).to_string(), action)
             })
             .collect();
         menus::MenuState {
@@ -549,9 +550,10 @@ impl Workspace {
                 } else {
                     doc.name()
                 };
-                let tooltip = doc
-                    .path()
-                    .map_or_else(|| "Not saved yet".to_string(), |p| p.display().to_string());
+                let tooltip = doc.path().map_or_else(
+                    || t("Not saved yet").to_string(),
+                    |p| p.display().to_string(),
+                );
                 let document = document.clone();
                 let focus = focus.clone();
                 let dragged = DraggedTab {
@@ -580,10 +582,10 @@ impl Workspace {
                             })
                             .context_menu(move |menu, _, _| {
                                 menu.action_context(focus.clone())
-                                    .menu("Close", Box::new(CloseTab))
-                                    .menu("Close Others", Box::new(CloseOtherTabs))
-                                    .menu("Close to the Right", Box::new(CloseTabsToRight))
-                                    .menu("Close Saved", Box::new(CloseSavedTabs))
+                                    .menu(t("Close"), Box::new(CloseTab))
+                                    .menu(t("Close Others"), Box::new(CloseOtherTabs))
+                                    .menu(t("Close to the Right"), Box::new(CloseTabsToRight))
+                                    .menu(t("Close Saved"), Box::new(CloseSavedTabs))
                             }),
                     )
                     .suffix(

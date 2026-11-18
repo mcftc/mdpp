@@ -20,6 +20,7 @@ use gpui_kit::component::{ActiveTheme as _, h_flex};
 use gpui_kit::*;
 use mdpp_core::cli::parse_line_column;
 use mdpp_core::fuzzy;
+use mdpp_core::i18n::{t, tf};
 
 /// What the first character of the query selects.
 pub const COMMANDS_PREFIX: &str = ">";
@@ -63,7 +64,9 @@ struct Row {
 /// What the palette searches, gathered when it opens.
 pub struct Sources {
     /// Label, where it is in the menus, what it does (a command or a snippet).
-    pub commands: Vec<(SharedString, SharedString, Choice)>,
+    /// Label, where it is in the menus, what it does (a command or a snippet), and extra words it
+    /// is found by (its English name when the UI is translated).
+    pub commands: Vec<(SharedString, SharedString, Choice, String)>,
     pub files: Vec<PathBuf>,
     /// The opened folder: its files are shown relative to it.
     pub root: Option<PathBuf>,
@@ -110,12 +113,12 @@ impl Palette {
             let names: Vec<String> = sources
                 .commands
                 .iter()
-                .map(|(label, place, _)| format!("{label} {place}"))
+                .map(|(label, place, _, also)| format!("{label} {place} {also}"))
                 .collect();
             fuzzy::rank(text, names.iter().map(String::as_str))
                 .into_iter()
                 .map(|i| {
-                    let (label, place, choice) = &sources.commands[i];
+                    let (label, place, choice, _) = &sources.commands[i];
                     Row {
                         label: label.clone(),
                         detail: place.clone(),
@@ -144,8 +147,11 @@ impl Palette {
             parse_line_column(text.trim())
                 .map(|(line, column)| Row {
                     label: match column {
-                        Some(column) => format!("Go to line {line}, column {column}"),
-                        None => format!("Go to line {line}"),
+                        Some(column) => tf(
+                            "Go to line {line}, column {column}",
+                            &[("line", &line), ("column", &column)],
+                        ),
+                        None => tf("Go to line {line}", &[("line", &line)]),
                     }
                     .into(),
                     detail: SharedString::default(),
@@ -202,10 +208,10 @@ impl Palette {
 
     fn placeholder(query: &str) -> &'static str {
         match query.chars().next() {
-            Some('>') => "Run a command…",
-            Some(HEADINGS_PREFIX) => "Go to a heading…",
-            Some(LINE_PREFIX) => "Go to line[:column]…",
-            _ => "Open a file — or type > for commands, @ for headings, : for a line",
+            Some('>') => t("Run a command…"),
+            Some(HEADINGS_PREFIX) => t("Go to a heading…"),
+            Some(LINE_PREFIX) => t("Go to line[:column]…"),
+            _ => t("Open a file — or type > for commands, @ for headings, : for a line"),
         }
     }
 }

@@ -16,6 +16,7 @@ use mdpp_core::cli::OpenRequest;
 use mdpp_core::search::{FileResults, MAX_MATCHES, Search, SearchOptions, search_files};
 
 use crate::find::{MATCH_HIGHLIGHT_OPACITY, option_buttons};
+use mdpp_core::i18n::{t, tf};
 
 /// Asks the workspace to open a result.
 pub struct OpenMatch(pub OpenRequest);
@@ -55,7 +56,7 @@ impl SearchPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let query = cx.new(|cx| InputState::new(window, cx).placeholder("Find in files"));
+        let query = cx.new(|cx| InputState::new(window, cx).placeholder(t("Find in files")));
         let subscription = cx.subscribe_in(&query, window, |this, _, event, _, cx| match event {
             InputEvent::Change => this.search(this.debounce, cx),
             InputEvent::PressEnter { .. } => this.search(Duration::ZERO, cx),
@@ -162,16 +163,21 @@ impl SearchPanel {
             return error.clone();
         }
         if self.searching {
-            return "Searching…".into();
+            return t("Searching…").into();
         }
         let results = &self.results;
         match results.matches.len() {
             0 if self.query.read(cx).value().is_empty() => String::new(),
-            0 => "No matches".into(),
-            count => format!(
-                "{count}{} matches in {} files",
-                if results.truncated { "+" } else { "" },
-                results.files_with_matches
+            0 => t("No matches").into(),
+            count => tf(
+                "{count} matches in {files} files",
+                &[
+                    (
+                        "count",
+                        &format!("{count}{}", if results.truncated { "+" } else { "" }),
+                    ),
+                    ("files", &results.files_with_matches),
+                ],
             ),
         }
     }

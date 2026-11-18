@@ -339,6 +339,17 @@ mod tests {
     }
 
     #[test]
+    fn language_choices_are_the_shipped_locales() {
+        let entry = PAGES
+            .iter()
+            .flat_map(|p| p.groups.iter().flat_map(|g| &g.entries))
+            .find(|e| e.key == "language")
+            .unwrap();
+        let shipped: Vec<String> = crate::i18n::languages().map(String::from).collect();
+        assert_eq!(entry.control, Control::Choice(shipped));
+    }
+
+    #[test]
     fn writing_keeps_comments_and_removes_defaults() {
         let user = "# my settings\nsoft_wrap = false # I like it long\n\n[diagnostics]\nmissing-file = \"off\"\n";
         let out = write_value(user, "font_size", &toml::Value::Integer(15)).unwrap();

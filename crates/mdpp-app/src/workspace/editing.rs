@@ -86,6 +86,7 @@ fn percent_encode_link(link: &str) -> String {
 }
 
 use super::*;
+use mdpp_core::i18n::{t, tf};
 
 /// Zoom changes the editor text by this many pixels per step, within this range (smaller is
 /// unreadable; larger no longer fits a useful line on a laptop screen).
@@ -286,7 +287,7 @@ impl Workspace {
     ) {
         let doc = self.active_document().read(cx);
         let Some(doc_path) = doc.path().map(std::path::Path::to_path_buf) else {
-            let message = "Save the document first: images are stored next to it.";
+            let message = t("Save the document first: images are stored next to it.");
             return window.push_notification(Notification::warning(message), cx);
         };
         let state = doc.editor().read(cx);
@@ -478,13 +479,14 @@ impl Workspace {
         let text = state.text().to_string();
         let index = mdpp_markdown::DocIndex::build(&text);
         let Some((which, current)) = rename::heading_at(&text, &index, state.cursor()) else {
-            let message = "Put the caret on a heading, or on a link to one, to rename it.";
+            let message = t("Put the caret on a heading, or on a link to one, to rename it.");
             return window.push_notification(Notification::info(message), cx);
         };
         let submit: crate::prompt::Submit = Box::new(move |typed, window, cx| {
             let text = editor.read(cx).text().to_string();
-            let edit = rename::rename_heading(&text, which, typed)
-                .ok_or("Type a new name (one line, different from the current one)")?;
+            let edit = rename::rename_heading(&text, which, typed).ok_or(t(
+                "Type a new name (one line, different from the current one)",
+            ))?;
             editor.update(cx, |state, cx| {
                 state.set_selected_range(edit.range, cx);
                 state.replace(edit.text, window, cx);
@@ -493,8 +495,8 @@ impl Workspace {
             Ok(())
         });
         let ask = Ask {
-            label: "Rename heading".into(),
-            placeholder: "New heading text".into(),
+            label: t("Rename heading").to_string().into(),
+            placeholder: t("New heading text").to_string().into(),
             value: current,
             submit,
         };
@@ -513,7 +515,7 @@ impl Workspace {
         let text = state.text().to_string();
         let index = mdpp_markdown::DocIndex::build(&text);
         let Some((which, _)) = rename::heading_at(&text, &index, state.cursor()) else {
-            let message = "Put the caret on a heading to find the links to it.";
+            let message = t("Put the caret on a heading to find the links to it.");
             return window.push_notification(Notification::info(message), cx);
         };
         let query = format!("#{})", index.headings[which].anchor);
@@ -532,13 +534,17 @@ impl Workspace {
         let current = state.cursor_position().line + 1;
         let submit: crate::prompt::Submit = Box::new(move |typed, window, cx| {
             let (line, column) = mdpp_core::cli::parse_line_column(typed.trim())
-                .ok_or("Type a line number, or line:column")?;
+                .ok_or(t("Type a line number, or line:column"))?;
             crate::prompt::move_caret(&editor, line, column, window, cx);
             Ok(())
         });
         let ask = Ask {
-            label: "Go to line".into(),
-            placeholder: format!("Line 1–{lines}, or line:column (now {current})").into(),
+            label: t("Go to line").to_string().into(),
+            placeholder: tf(
+                "Line 1–{lines}, or line:column (now {current})",
+                &[("lines", &lines), ("current", &current)],
+            )
+            .into(),
             value: String::new(),
             submit,
         };

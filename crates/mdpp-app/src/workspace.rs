@@ -40,6 +40,7 @@ use crate::prompt::{Ask, PromptBar};
 use crate::watch::{DiskWatcher, folder_of};
 use folder::Side;
 use gpui_kit::component::menu::DropdownMenu as _;
+use mdpp_core::i18n::{t, tf};
 use mdpp_core::text::{Eol, common_encodings, encoding_for_label};
 
 /// Outline rows: indentation per heading level and the row's base padding, in logical pixels.
@@ -655,7 +656,7 @@ impl Workspace {
                 cx.notify();
             }),
             None if changed => {
-                window.push_notification(Notification::info("Settings reloaded"), cx)
+                window.push_notification(Notification::info(t("Settings reloaded")), cx)
             }
             None => {}
         }
@@ -670,12 +671,16 @@ impl Workspace {
         let name = self.active_document().read(cx).name();
         let (message, reload) = match conflict {
             DiskConflict::Changed => (
-                format!("{name} changed on disk, and you have unsaved changes."),
+                tf(
+                    "{name} changed on disk, and you have unsaved changes.",
+                    &[("name", &name)],
+                ),
                 true,
             ),
             DiskConflict::Deleted => (
-                format!(
-                    "{name} was deleted on disk. Its text stays here — save to write it again."
+                tf(
+                    "{name} was deleted on disk. Its text stays here — save to write it again.",
+                    &[("name", &name)],
                 ),
                 false,
             ),
@@ -692,7 +697,7 @@ impl Workspace {
             .when(reload, |bar| {
                 bar.child(
                     Button::new("reload-from-disk")
-                        .label("Reload (discard mine)")
+                        .label(t("Reload (discard mine)"))
                         .small()
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.active_document()
@@ -702,7 +707,7 @@ impl Workspace {
             })
             .child(
                 Button::new("keep-mine")
-                    .label(if reload { "Keep mine" } else { "OK" })
+                    .label(t(if reload { "Keep mine" } else { "OK" }))
                     .small()
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.active_document()
@@ -801,7 +806,7 @@ impl Workspace {
                 .p_3()
                 .text_sm()
                 .text_color(cx.theme().muted_foreground)
-                .child("No headings")
+                .child(t("No headings"))
                 .into_any_element();
         }
         uniform_list(
@@ -1150,7 +1155,7 @@ impl Workspace {
         let selection = state.selected_range();
         let selected = (!selection.is_empty())
             .then(|| state.text().slice(selection).chars().count())
-            .map(|chars| format!(" ({chars} selected)"))
+            .map(|chars| tf(" ({count} selected)", &[("count", &chars)]))
             .unwrap_or_default();
         let lines = state.text().len_lines(ropey::LineType::LF);
         let muted = cx.theme().muted_foreground;
@@ -1161,17 +1166,24 @@ impl Workspace {
         let minutes = words
             .div_ceil(self.settings.reading_words_per_minute.max(1) as usize)
             .max(1);
-        let reading = format!("{words} words · {minutes} min read");
+        let reading = tf(
+            "{words} words · {minutes} min read",
+            &[("words", &words), ("minutes", &minutes)],
+        );
         StatusBar::new()
             .left(
                 h_flex()
                     .gap_3()
-                    .child(item(format!(
-                        "Ln {}, Col {}{selected}",
-                        cursor.line + 1,
-                        cursor.character + 1
-                    )))
-                    .child(item(format!("{lines} lines")))
+                    .child(item(
+                        tf(
+                            "Ln {line}, Col {column}",
+                            &[
+                                ("line", &(cursor.line + 1)),
+                                ("column", &(cursor.character + 1)),
+                            ],
+                        ) + &selected,
+                    ))
+                    .child(item(tf("{count} lines", &[("count", &lines)])))
                     .child(item(reading)),
             )
             .right(
@@ -1186,7 +1198,7 @@ impl Workspace {
                             .ghost()
                             .xsmall()
                             .dropdown_menu(|menu, window, cx| {
-                                menu.submenu("Reopen with", window, cx, |menu, _, _| {
+                                menu.submenu(t("Reopen with"), window, cx, |menu, _, _| {
                                     common_encodings().fold(menu, |menu, label| {
                                         menu.menu(
                                             label,
@@ -1197,7 +1209,7 @@ impl Workspace {
                                     })
                                 })
                                 .submenu(
-                                    "Save with",
+                                    t("Save with"),
                                     window,
                                     cx,
                                     |menu, _, _| {
@@ -1218,10 +1230,10 @@ impl Workspace {
                             .label(eol)
                             .ghost()
                             .xsmall()
-                            .tooltip("Line endings")
+                            .tooltip(t("Line endings"))
                             .dropdown_menu(|menu, _, _| {
                                 Eol::ALL.into_iter().fold(
-                                    menu.label("Convert to (on the next save)"),
+                                    menu.label(t("Convert to (on the next save)")),
                                     |menu, eol| {
                                         menu.menu(eol.to_string(), Box::new(ConvertEol { eol }))
                                     },

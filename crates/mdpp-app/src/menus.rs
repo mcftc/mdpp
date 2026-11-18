@@ -8,6 +8,7 @@ use std::sync::LazyLock;
 
 use gpui_kit::component::menu::PopupMenu;
 use gpui_kit::{Action, App, Context, Window};
+use mdpp_core::i18n::t;
 use serde::Deserialize;
 
 const MENUS: &str = include_str!("../../../assets/menus.toml");
@@ -117,9 +118,9 @@ fn fill_items(
             Ok(action) => match check {
                 Some(check) => {
                     let on = state.checked.contains(&check.as_str());
-                    menu.menu_with_check(label.clone(), on, action)
+                    menu.menu_with_check(t(label), on, action)
                 }
-                None => menu.menu(label.clone(), action),
+                None => menu.menu(t(label), action),
             },
             Err(_) => menu, // reported once at startup by `problems`
         },
@@ -130,7 +131,7 @@ fn fill_items(
         } => {
             let state = state.clone();
             menu.submenu(
-                submenu.clone(),
+                t(submenu).to_string(),
                 window,
                 cx,
                 move |menu, window, cx| match list {
@@ -140,7 +141,7 @@ fn fill_items(
                             .get(list.as_str())
                             .map_or(&[][..], Vec::as_slice);
                         if entries.is_empty() {
-                            return menu.label("None");
+                            return menu.label(t("None"));
                         }
                         entries.iter().fold(menu, |menu, (label, action)| {
                             menu.menu(label.clone(), action.boxed_clone())
@@ -266,5 +267,64 @@ mod tests {
                 assert!(action.contains("::"), "{action}: namespace::Action");
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod translation_tests {
+    use std::collections::HashSet;
+    use std::path::Path;
+
+    /// Every text the UI translates has a Turkish line: the literals given to `t` and `tf` in this
+    /// crate, the menus, the snippets and the settings window's titles and descriptions.
+    #[test]
+    fn every_ui_text_is_translated() {
+        let turkish: toml::Table =
+            toml::from_str(include_str!("../../../assets/locales/tr.toml")).unwrap();
+        let mut wanted: HashSet<String> = HashSet::new();
+        let call = regex::Regex::new(r#"\btf?\(\s*"((?:[^"\\]|\\.)*)""#).unwrap();
+        let mut stack = vec![Path::new(env!("CARGO_MANIFEST_DIR")).join("src")];
+        while let Some(dir) = stack.pop() {
+            for entry in std::fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    stack.push(path);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    let source = std::fs::read_to_string(&path).unwrap();
+                    wanted.extend(
+                        call.captures_iter(&source)
+                            .map(|c| c[1].replace("\\\"", "\"")),
+                    );
+                }
+            }
+        }
+        for item in super::all_items() {
+            match item {
+                super::ItemSpec::Action { label, .. } => wanted.insert(label.clone()),
+                super::ItemSpec::Submenu { submenu, .. } => wanted.insert(submenu.clone()),
+                super::ItemSpec::Separator { .. } => false,
+            };
+        }
+        wanted.extend(super::names().map(String::from));
+        wanted.extend(crate::snippets::all().iter().map(|s| s.name.clone()));
+        for page in mdpp_core::settings_ui::PAGES.iter() {
+            wanted.insert(page.title.clone());
+            for group in &page.groups {
+                wanted.insert(group.title.clone());
+                for entry in &group.entries {
+                    wanted.insert(entry.title.clone());
+                    wanted.insert(entry.description.clone());
+                }
+            }
+        }
+        let mut missing: Vec<_> = wanted
+            .into_iter()
+            .filter(|text| !turkish.contains_key(text))
+            .collect();
+        missing.sort();
+        assert!(
+            missing.is_empty(),
+            "not in assets/locales/tr.toml: {missing:#?}"
+        );
     }
 }

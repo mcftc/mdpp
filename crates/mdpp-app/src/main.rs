@@ -108,6 +108,7 @@ fn main() {
                 cx.activate(true);
             }
 
+            mdpp_core::i18n::init(&settings.language);
             let window_size = size(px(settings.window_width), px(settings.window_height));
             let options = WindowOptions {
                 window_bounds: Some(WindowBounds::centered(window_size, cx)),

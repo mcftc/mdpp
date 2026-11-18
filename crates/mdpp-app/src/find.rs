@@ -12,6 +12,7 @@ use gpui_kit::component::input::{
 use gpui_kit::component::{ActiveTheme, IconName, Selectable as _, Sizable as _, h_flex, v_flex};
 use gpui_kit::prelude::FluentBuilder as _;
 use gpui_kit::*;
+use mdpp_core::i18n::{t, tf};
 use mdpp_core::search::{MAX_MATCHES, Search, SearchOptions};
 
 /// Key context of the find and go-to-line bars: Escape inside their inputs closes them.
@@ -27,7 +28,7 @@ pub fn selected_line(editor: &Entity<EditorState>, cx: &App) -> Option<String> {
 }
 
 /// A search option switch: a short label, its meaning in the tooltip.
-fn toggle_button(id: &'static str, label: &'static str, tooltip: &'static str, on: bool) -> Button {
+fn toggle_button(id: &'static str, label: &'static str, tooltip: &str, on: bool) -> Button {
     Button::new(id)
         .label(label)
         .ghost()
@@ -64,7 +65,7 @@ pub fn option_buttons<T: 'static>(
         }),
     ];
     switches.map(|(id, label, tooltip, on, option)| {
-        toggle_button(id, label, tooltip, on)
+        toggle_button(id, label, t(tooltip), on)
             .on_click(cx.listener(move |this, _, window, cx| toggle(this, option, window, cx)))
     })
 }
@@ -92,8 +93,8 @@ impl EventEmitter<CloseRequested> for FindBar {}
 
 impl FindBar {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let query = cx.new(|cx| InputState::new(window, cx).placeholder("Find"));
-        let replacement = cx.new(|cx| InputState::new(window, cx).placeholder("Replace"));
+        let query = cx.new(|cx| InputState::new(window, cx).placeholder(t("Find")));
+        let replacement = cx.new(|cx| InputState::new(window, cx).placeholder(t("Replace")));
         let subscriptions =
             vec![
                 cx.subscribe_in(&query, window, |this, _, event: &InputEvent, window, cx| {
@@ -357,10 +358,10 @@ impl FindBar {
             return error.clone();
         }
         match (self.current, self.matches.len()) {
-            (_, 0) => "No results".to_string(),
-            (_, n) if n > MAX_MATCHES => format!("{MAX_MATCHES}+ matches"),
-            (Some(i), n) => format!("{} of {n}", i + 1),
-            (None, n) => format!("{n} matches"),
+            (_, 0) => t("No matches").to_string(),
+            (_, n) if n > MAX_MATCHES => tf("{count}+ matches", &[("count", &MAX_MATCHES)]),
+            (Some(i), n) => tf("{index} of {count}", &[("index", &(i + 1)), ("count", &n)]),
+            (None, n) => tf("{count} matches", &[("count", &n)]),
         }
     }
 }
@@ -384,7 +385,7 @@ impl Render for FindBar {
                 toggle_button(
                     "in-selection",
                     "Sel",
-                    "Find in selection",
+                    t("Find in selection"),
                     self.scope.is_some(),
                 )
                 .on_click(cx.listener(|this, _, window, cx| this.toggle_scope(window, cx))),
@@ -401,7 +402,7 @@ impl Render for FindBar {
                     .label("↑")
                     .ghost()
                     .small()
-                    .tooltip("Previous match (Shift+Enter)")
+                    .tooltip(t("Previous match (Shift+Enter)"))
                     .on_click(cx.listener(|this, _, window, cx| this.step(false, window, cx))),
             )
             .child(
@@ -409,7 +410,7 @@ impl Render for FindBar {
                     .label("↓")
                     .ghost()
                     .small()
-                    .tooltip("Next match (Enter)")
+                    .tooltip(t("Next match (Enter)"))
                     .on_click(cx.listener(|this, _, window, cx| this.step(true, window, cx))),
             )
             .child(
@@ -418,7 +419,7 @@ impl Render for FindBar {
                     .ghost()
                     .small()
                     .selected(self.show_replace)
-                    .tooltip("Replace")
+                    .tooltip(t("Replace"))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.show_replace = !this.show_replace;
                         cx.notify();
@@ -429,7 +430,7 @@ impl Render for FindBar {
                     .icon(IconName::Close)
                     .ghost()
                     .small()
-                    .tooltip("Close (Escape)")
+                    .tooltip(t("Close (Escape)"))
                     .on_click(cx.listener(|_, _, _, cx| cx.emit(CloseRequested))),
             );
         v_flex()
@@ -459,7 +460,7 @@ impl Render for FindBar {
                             Button::new("replace-all")
                                 .label("All")
                                 .small()
-                                .tooltip("Replace all")
+                                .tooltip(t("Replace all"))
                                 .on_click(
                                     cx.listener(|this, _, window, cx| this.replace_all(window, cx)),
                                 ),

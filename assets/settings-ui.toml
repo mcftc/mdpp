@@ -59,6 +59,10 @@ title = "Window"
 settings = ["window_width", "window_height", "menu_bar", "focus_mode_width"]
 
 [[page.group]]
+title = "Language"
+settings = ["language"]
+
+[[page.group]]
 title = "Outline"
 settings = ["outline_on_start", "outline_width"]
 
@@ -87,4 +91,5 @@ markup_fade = { min = 0, max = 1, step = 0.05 }
 recent_files_max = { min = 0, max = 100 }
 workspace_max_files = { min = 100, max = 100000, step = 100 }
 search_max_file_bytes = { min = 1024, max = 1073741824, step = 1048576 }
+language = { choices = ["auto", "en", "tr"] }
 "diagnostics.*" = { choices = ["error", "warning", "info", "hint", "off"] }

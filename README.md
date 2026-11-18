@@ -35,6 +35,7 @@ See [docs/PROGRESS.md](docs/PROGRESS.md).
   `:` to a line (fuzzy matching)
 - Focus mode (F11): full screen, the text alone; portable mode: put a file named `mdpp-portable`
   next to the program and everything stays in `mdpp-data/` beside it
+- English and Turkish UI (`language` setting: auto / en / tr)
 - Settings window (Ctrl+,) like Zed's: search, categories, a described control per setting —
   it writes your `settings.toml`; settings and key bindings are TOML files, applied live
 

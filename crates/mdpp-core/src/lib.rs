@@ -7,6 +7,7 @@ pub mod crash;
 pub mod file;
 pub mod folder;
 pub mod fuzzy;
+pub mod i18n;
 pub mod instance;
 pub mod keymap;
 pub mod paths;
