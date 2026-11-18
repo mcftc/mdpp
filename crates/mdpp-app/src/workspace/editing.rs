@@ -11,7 +11,7 @@ use gpui_kit::component::input::{self, Rope};
 use gpui_kit::*;
 use mdpp_core::assets::{PASTED_IMAGE_STEM, free_name, image_folder, link_from};
 use mdpp_lang::assist::{self, Edit};
-use mdpp_lang::{lines, percent_encode_path, table};
+use mdpp_lang::{lines, percent_encode_path, rename, table};
 
 /// An image to put into the document: pasted bytes or a dropped file.
 pub(super) enum NewImage {
@@ -425,12 +425,92 @@ impl Workspace {
         self.move_lines(false, window, cx);
     }
 
-    pub(super) fn go_to_line(&mut self, _: &GoToLine, window: &mut Window, cx: &mut Context<Self>) {
-        self.show_goto = true;
-        let editor = self.active_document().read(cx).editor().clone();
-        self.goto_bar
-            .update(cx, |bar, cx| bar.open(editor, window, cx));
+    /// Show the prompt bar with `ask`.
+    pub(super) fn prompt(&mut self, ask: Ask, window: &mut Window, cx: &mut Context<Self>) {
+        self.show_prompt = true;
+        self.prompt_bar
+            .update(cx, |bar, cx| bar.open(ask, window, cx));
         cx.notify();
+    }
+
+    /// F2 on a heading (or a link to one): rename it, with every link in this document to a
+    /// heading whose anchor changes.
+    pub(super) fn rename_heading(
+        &mut self,
+        _: &RenameHeading,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let editor = self.active_document().read(cx).editor().clone();
+        let state = editor.read(cx);
+        let text = state.text().to_string();
+        let index = mdpp_markdown::DocIndex::build(&text);
+        let Some((which, current)) = rename::heading_at(&text, &index, state.cursor()) else {
+            let message = "Put the caret on a heading, or on a link to one, to rename it.";
+            return window.push_notification(Notification::info(message), cx);
+        };
+        let submit: crate::prompt::Submit = Box::new(move |typed, window, cx| {
+            let text = editor.read(cx).text().to_string();
+            let edit = rename::rename_heading(&text, which, typed)
+                .ok_or("Type a new name (one line, different from the current one)")?;
+            editor.update(cx, |state, cx| {
+                state.set_selected_range(edit.range, cx);
+                state.replace(edit.text, window, cx);
+                state.set_selected_range(edit.select, cx);
+            });
+            Ok(())
+        });
+        let ask = Ask {
+            label: "Rename heading".into(),
+            placeholder: "New heading text".into(),
+            value: current,
+            submit,
+        };
+        self.prompt(ask, window, cx);
+    }
+
+    /// Shift+F12 on a heading: find in files for links to its anchor (`#anchor)`), in the
+    /// folder's files or the open tabs' files as saved.
+    pub(super) fn find_references(
+        &mut self,
+        _: &FindReferences,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let state = self.active_document().read(cx).editor().read(cx);
+        let text = state.text().to_string();
+        let index = mdpp_markdown::DocIndex::build(&text);
+        let Some((which, _)) = rename::heading_at(&text, &index, state.cursor()) else {
+            let message = "Put the caret on a heading to find the links to it.";
+            return window.push_notification(Notification::info(message), cx);
+        };
+        let query = format!("#{})", index.headings[which].anchor);
+        self.show_side = true;
+        self.side = folder::Side::Search;
+        self.search_panel
+            .update(cx, |panel, cx| panel.focus(Some(query), window, cx));
+        cx.notify();
+    }
+
+    /// Ctrl+G: `line` or `line:column`, counted from 1.
+    pub(super) fn go_to_line(&mut self, _: &GoToLine, window: &mut Window, cx: &mut Context<Self>) {
+        let editor = self.active_document().read(cx).editor().clone();
+        let state = editor.read(cx);
+        let lines = state.text().len_lines(ropey::LineType::LF);
+        let current = state.cursor_position().line + 1;
+        let submit: crate::prompt::Submit = Box::new(move |typed, window, cx| {
+            let (line, column) = mdpp_core::cli::parse_line_column(typed.trim())
+                .ok_or("Type a line number, or line:column")?;
+            crate::prompt::move_caret(&editor, line, column, window, cx);
+            Ok(())
+        });
+        let ask = Ask {
+            label: "Go to line".into(),
+            placeholder: format!("Line 1–{lines}, or line:column (now {current})").into(),
+            value: String::new(),
+            submit,
+        };
+        self.prompt(ask, window, cx);
     }
 
     /// Editor text size: the `font_size` setting moved by the zoom steps.

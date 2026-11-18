@@ -225,7 +225,14 @@ impl Workspace {
         );
 
         // Each step: set the text and caret, press keys, compare the text.
-        let steps: [(&str, usize, &[&str], &str); 7] = [
+        let steps: [(&str, usize, &[&str], &str); 8] = [
+            // F2 renames the heading (the bar starts with its text selected) and its links.
+            (
+                "# Old\n\n[x](#old)",
+                2,
+                &["f2", "n", "e", "w", "enter"],
+                "# new\n\n[x](#new)",
+            ),
             // Tables: Tab aligns and moves on (typing replaces the selected cell); Enter adds a row.
             (
                 "| a | b |\n|---|---|\n| 1 | 2 |",
@@ -283,7 +290,9 @@ impl Workspace {
                 .await;
         }
         let line = editor.read_with(cx, |state, _| state.cursor_position().line);
-        let bar_closed = this.update(cx, |this, _| !this.show_goto).unwrap_or(false);
+        let bar_closed = this
+            .update(cx, |this, _| !this.show_prompt)
+            .unwrap_or(false);
         println!(
             "BENCH check commands go_to_line={} line={line} bar_closed={bar_closed}",
             line == 2

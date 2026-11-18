@@ -82,7 +82,7 @@ impl Workspace {
             Choice::Jump(offset) => self.jump_to(offset, window, cx),
             Choice::Line(line, column) => {
                 let editor = self.active_document().read(cx).editor().clone();
-                crate::goto::move_caret(&editor, line, column, window, cx);
+                crate::prompt::move_caret(&editor, line, column, window, cx);
             }
         }
     }

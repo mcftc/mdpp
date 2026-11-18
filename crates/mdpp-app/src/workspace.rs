@@ -36,7 +36,7 @@ use mdpp_core::settings::Settings;
 use crate::bench::{self, SharedProbe};
 use crate::document::{DiskConflict, Document, DocumentChanged, OpenedDoc, Persist, Renamed};
 use crate::find::{CloseRequested, FindBar};
-use crate::goto::GoToLineBar;
+use crate::prompt::{Ask, PromptBar};
 use crate::watch::{DiskWatcher, folder_of};
 use folder::Side;
 use gpui_kit::component::menu::DropdownMenu as _;
@@ -99,6 +99,8 @@ actions!(
         ToggleFolderPanel,
         FindInFiles,
         FormatTable,
+        RenameHeading,
+        FindReferences,
         SaveAll,
         ReopenClosedTab,
         ReportBug,
@@ -234,8 +236,8 @@ pub struct Workspace {
     show_preview: bool,
     find_bar: Entity<FindBar>,
     show_find: bool,
-    goto_bar: Entity<GoToLineBar>,
-    show_goto: bool,
+    prompt_bar: Entity<PromptBar>,
+    show_prompt: bool,
     show_outline: bool,
     /// The folder opened with `mdpp <folder>` or File → Open Folder, and whether its panel shows.
     folder: Option<folder::FolderState>,
@@ -293,7 +295,7 @@ impl Workspace {
             .map_err(|error| problems.push(format!("File changes will not be noticed: {error}")))
             .ok();
         let find_bar = cx.new(|cx| FindBar::new(window, cx));
-        let goto_bar = cx.new(|cx| GoToLineBar::new(window, cx));
+        let prompt_bar = cx.new(|cx| PromptBar::new(window, cx));
         let search_panel = {
             let workspace = cx.entity().downgrade();
             let files: crate::search_panel::FileSource = Rc::new(move |cx: &App| {
@@ -322,7 +324,7 @@ impl Workspace {
                 |this, _, _: &CloseRequested, window, cx| this.hide_bars(window, cx),
             ),
             cx.subscribe_in(
-                &goto_bar,
+                &prompt_bar,
                 window,
                 |this, _, _: &CloseRequested, window, cx| this.hide_bars(window, cx),
             ),
@@ -343,8 +345,8 @@ impl Workspace {
             show_preview: settings.preview_on_start,
             find_bar,
             show_find: false,
-            goto_bar,
-            show_goto: false,
+            prompt_bar,
+            show_prompt: false,
             show_outline: settings.outline_on_start,
             folder: None,
             show_side: false,
@@ -839,7 +841,7 @@ impl Workspace {
     /// Close the find and go-to-line bars and give the editor the keyboard back.
     fn hide_bars(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.show_find = false;
-        self.show_goto = false;
+        self.show_prompt = false;
         self.find_bar.update(cx, |bar, cx| bar.close(cx));
         let editor = self.active_document().read(cx).editor().clone();
         window.focus(&editor.focus_handle(cx), cx);
@@ -1292,6 +1294,8 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::toggle_folder_panel))
             .on_action(cx.listener(Self::find_in_files))
             .on_action(cx.listener(Self::format_table))
+            .on_action(cx.listener(Self::rename_heading))
+            .on_action(cx.listener(Self::find_references))
             .on_action(cx.listener(Self::save_all))
             .on_action(cx.listener(Self::reopen_closed_tab))
             .on_action(cx.listener(Self::close_other_tabs))
@@ -1342,7 +1346,7 @@ impl Render for Workspace {
                 root.child(self.render_conflict(conflict, cx))
             })
             .when(self.show_find, |root| root.child(self.find_bar.clone()))
-            .when(self.show_goto, |root| root.child(self.goto_bar.clone()))
+            .when(self.show_prompt, |root| root.child(self.prompt_bar.clone()))
             .child(div().flex_1().min_h_0().child(body))
             .child(self.render_status(cx))
             // Painted after the editor: marks "the frame is on its way" for the measurements.

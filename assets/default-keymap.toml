@@ -223,3 +223,11 @@ action = "mdpp::QuickOpen"
 [[binding]]
 keys = "secondary-shift-f"
 action = "mdpp::FindInFiles"
+
+[[binding]]
+keys = "f2"
+action = "mdpp::RenameHeading"
+
+[[binding]]
+keys = "shift-f12"
+action = "mdpp::FindReferences"

@@ -100,6 +100,8 @@ items = [
   { label = "Go to Heading…", action = "mdpp::GoToHeading" },
   { label = "Go to Line…", action = "mdpp::GoToLine" },
   { label = "Go to Definition", action = "input::GoToDefinition" },
+  { label = "Find References", action = "mdpp::FindReferences" },
+  { label = "Rename Heading…", action = "mdpp::RenameHeading" },
   { separator = true },
   { label = "Next Tab", action = "mdpp::NextTab" },
   { label = "Previous Tab", action = "mdpp::PreviousTab" },
