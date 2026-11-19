@@ -2,7 +2,7 @@
 # Binary package from the GitHub release archive. Update pkgver and sha256sums for each release
 # (`sha256sum` of the archive, also attached to the release as .sha256).
 pkgname=mdpp-bin
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Fast Markdown editor with intellisense (MD++)"
 arch=('x86_64')
@@ -13,7 +13,7 @@ optdepends=('vulkan-driver: GPU rendering (mesa, radeon, intel or nvidia Vulkan 
 provides=('mdpp')
 conflicts=('mdpp')
 source=("$url/releases/download/v$pkgver/mdpp-$pkgver-x86_64-linux.tar.gz")
-sha256sums=('bf5f34d1334391c537f491243bc42e780c7388fc9e0f02291715be656601cb6b')
+sha256sums=('903389634fc48d5305da51b26f49c0137298b12fa98f08c79205240cf1223949')
 
 package() {
     cd "mdpp-$pkgver-x86_64-linux"
