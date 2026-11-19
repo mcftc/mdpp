@@ -5,6 +5,9 @@
 //! unless `MDPP_DATA_DIR` is set, so measurements never touch a real session. `MDPP_INSTANCE`
 //! names the single-instance socket (separate test instances from a real one).
 
+// A window program on Windows: no console window behind it (debug builds keep one for logs).
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 mod bench;
 mod code_actions;
 mod completion;

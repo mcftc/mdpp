@@ -32,5 +32,9 @@ smol.workspace = true
 [lints]
 workspace = true
 
+[build-dependencies]
+# The Windows icon and version resource (already built: gpui embeds its manifest with it).
+embed-resource = "3"
+
 [dev-dependencies]
 regex.workspace = true

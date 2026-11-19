@@ -5,7 +5,7 @@ members = ["crates/*"]
 exclude = ["spikes"]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.97"
 license = "MIT OR Apache-2.0"
@@ -88,3 +88,8 @@ smol = { opt-level = 3 }
 inherits = "release"
 strip = false
 debug = "line-tables-only"
+
+# Windows builds made on Linux: GPUI's Windows backend with a build-script branch that compiles its
+# HLSL shaders with vkd3d-compiler instead of the Windows SDK's fxc.exe (vendor/README.md).
+[patch.crates-io]
+gpui-pre-windows = { path = "vendor/gpui-pre-windows" }
